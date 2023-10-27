@@ -1,20 +1,25 @@
 package com.example.appprojectone
 
 import android.os.Bundle
-import com.google.android.material.snackbar.Snackbar
+import android.renderscript.ScriptGroup.Input
+import android.text.InputType
+import android.widget.AdapterView.OnItemClickListener
+import android.widget.ArrayAdapter
+import android.widget.EditText
+import android.widget.ListView
+import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.navigation.findNavController
-import androidx.navigation.ui.AppBarConfiguration
-import androidx.navigation.ui.navigateUp
-import androidx.navigation.ui.setupActionBarWithNavController
-import android.view.Menu
-import android.view.MenuItem
 import com.example.appprojectone.databinding.ActivityMainBinding
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var appBarConfiguration: AppBarConfiguration
     private lateinit var binding: ActivityMainBinding
+    private lateinit var lvtodolist: ListView
+    private lateinit var fab: FloatingActionButton
+    private lateinit var shoppingItems: ArrayList<String>
+    private lateinit var itemadapter: ArrayAdapter<String>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -22,37 +27,62 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        setSupportActionBar(binding.toolbar)
+        lvtodolist = findViewById(R.id.lvtodolist)
+        fab = findViewById(R.id.floatingActionButton)
+        shoppingItems = ArrayList()
 
-        val navController = findNavController(R.id.nav_host_fragment_content_main)
-        appBarConfiguration = AppBarConfiguration(navController.graph)
-        setupActionBarWithNavController(navController, appBarConfiguration)
+        shoppingItems.add("Apfel")
+        shoppingItems.add("Birne")
 
-        binding.fab.setOnClickListener { view ->
-            Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                .setAction("Action", null).show()
+        itemadapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, shoppingItems)
+        lvtodolist.adapter = itemadapter
+
+        // Set an item long click listener for deletion
+        lvtodolist.setOnItemLongClickListener { _, _, position, _ ->
+            // AlertDialog for confirmation on deletion
+            AlertDialog.Builder(this).apply {
+                setTitle("Delete Item")
+                setMessage("You are about to delete an item. Are you sure?")
+                setPositiveButton("Yes") { dialog, _ ->
+                    shoppingItems.removeAt(position) // remove the item from the list
+                    itemadapter.notifyDataSetChanged() // refresh the adapter
+                    Toast.makeText(this@MainActivity, "Item deleted", Toast.LENGTH_SHORT).show()
+                    dialog.dismiss()
+                }
+                setNegativeButton("No") { dialog, _ ->
+                    dialog.dismiss()
+                }
+            }.create().show()
+
+            true // indicates that the long click was consumed
         }
-    }
 
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        menuInflater.inflate(R.menu.menu_main, menu)
-        return true
-    }
 
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        return when (item.itemId) {
-            R.id.action_settings -> true
-            else -> super.onOptionsItemSelected(item)
+
+        fab.setOnClickListener {
+            var builder = AlertDialog.Builder(this)
+            builder.setTitle("Add a ToDo Item")
+
+            var input = EditText(this)
+            input.hint = "create something wonderful"
+            input.inputType = InputType.TYPE_CLASS_TEXT
+            builder.setView(input)
+
+            builder.setPositiveButton("Lets go!") { dialog, which ->
+                shoppingItems.add(input.text.toString())
+                itemadapter.notifyDataSetChanged()
+            }
+
+            builder.setNegativeButton("No :(") { dialog, which ->
+                dialog.cancel()
+
+            }
+            builder.show()
+
         }
-    }
 
-    override fun onSupportNavigateUp(): Boolean {
-        val navController = findNavController(R.id.nav_host_fragment_content_main)
-        return navController.navigateUp(appBarConfiguration)
-                || super.onSupportNavigateUp()
     }
 }
+
+
+
