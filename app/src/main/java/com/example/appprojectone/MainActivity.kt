@@ -1,11 +1,13 @@
 package com.example.appprojectone
 
+import TaskAdapter
 import android.os.Bundle
 import android.renderscript.ScriptGroup.Input
 import android.text.InputType
 import android.widget.AdapterView.OnItemClickListener
 import android.widget.ArrayAdapter
 import android.widget.EditText
+import android.widget.LinearLayout
 import android.widget.ListView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -34,14 +36,38 @@ class MainActivity : AppCompatActivity() {
         shoppingItems.add("Apfel")
         shoppingItems.add("Birne")
 
-        itemadapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, shoppingItems)
+        itemadapter = TaskAdapter(this, shoppingItems)
         lvtodolist.adapter = itemadapter
 
+
+        fab.setOnClickListener {
+            var builder = AlertDialog.Builder(this)
+            builder.setMessage("Add Task")
+
+            var input = EditText(this)
+            input.hint = "create something wonderful"
+            input.inputType = InputType.TYPE_CLASS_TEXT
+            builder.setView(input)
+
+
+            builder.setPositiveButton("Add Task") { dialog, which ->
+                shoppingItems.add(input.text.toString())
+                itemadapter.notifyDataSetChanged()
+            }
+
+            builder.setNegativeButton("Cancel") { dialog, which ->
+                dialog.cancel()
+
+            }
+            builder.show()
+
+
+        }
         // Set an item long click listener for deletion
         lvtodolist.setOnItemLongClickListener { _, _, position, _ ->
             // AlertDialog for confirmation on deletion
             AlertDialog.Builder(this).apply {
-                setTitle("Delete Item")
+                setTitle("Delete Task")
                 setMessage("You are about to delete an item. Are you sure?")
                 setPositiveButton("Yes") { dialog, _ ->
                     shoppingItems.removeAt(position) // remove the item from the list
@@ -59,27 +85,6 @@ class MainActivity : AppCompatActivity() {
 
 
 
-        fab.setOnClickListener {
-            var builder = AlertDialog.Builder(this)
-            builder.setTitle("Add a ToDo Item")
-
-            var input = EditText(this)
-            input.hint = "create something wonderful"
-            input.inputType = InputType.TYPE_CLASS_TEXT
-            builder.setView(input)
-
-            builder.setPositiveButton("Lets go!") { dialog, which ->
-                shoppingItems.add(input.text.toString())
-                itemadapter.notifyDataSetChanged()
-            }
-
-            builder.setNegativeButton("No :(") { dialog, which ->
-                dialog.cancel()
-
-            }
-            builder.show()
-
-        }
 
     }
 }
