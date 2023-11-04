@@ -11,6 +11,8 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.example.appprojectone.databinding.ActivityMainBinding
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import android.content.Context
+import android.view.inputmethod.InputMethodManager
 
 // Import statements: These help the code understand where to get certain tools and definitions
 // They referencing a dictionary to understand the meaning of a word.
@@ -74,23 +76,13 @@ class MainActivity : AppCompatActivity() {
             builder.show()
         }
 
-        // If a list item is long-clicked, ask if the user wants to delete it
-        lvtodolist.setOnItemLongClickListener { _, _, position, _ ->
-            AlertDialog.Builder(this).apply {
-                setTitle("Delete Task")
-                setMessage("You are about to delete an item. Are you sure?")
-                setPositiveButton("Yes") { dialog, _ ->
-                    shoppingItems.removeAt(position)
-                    itemadapter.notifyDataSetChanged()
-                    Toast.makeText(this@MainActivity, "Item deleted", Toast.LENGTH_SHORT).show()
-                    dialog.dismiss()
-                }
-                setNegativeButton("No") { dialog, _ ->
-                    dialog.dismiss()
-                }
-            }.create().show()
-
-            true
+        lvtodolist.setOnItemClickListener { _, _, position, _ ->
+            val listItem = lvtodolist.getChildAt(position - lvtodolist.firstVisiblePosition)
+            val taskEditText = listItem?.findViewById<EditText>(R.id.taskDescription)
+            taskEditText?.requestFocus()
+            val imm: InputMethodManager = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+            imm.showSoftInput(taskEditText, InputMethodManager.SHOW_IMPLICIT)
         }
+
     }
 }
