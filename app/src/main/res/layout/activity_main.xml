@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     android:fitsSystemWindows="true"
     android:forceDarkAllowed="true"
-    tools:context="com.example.appprojectone.MainActivity">
+    tools:context="com.aeternumindustries.taskmaker.MainActivity">
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/floatingActionButton"
@@ -32,7 +32,7 @@
             android:minHeight="?attr/actionBarSize"
             android:theme="?attr/actionBarTheme"
             app:subtitleTextAppearance="@style/TextAppearance.AppCompat.Body1"
-            app:title="TaskMaker"
+            app:title="TaskMaster"
             app:titleMargin="6dp"
             app:titleCentered="true"
             app:titleTextAppearance="@style/TextAppearance.AppCompat.Display1"
@@ -46,9 +46,7 @@
         <ListView
             android:id="@+id/lvtodolist"
             android:layout_width="match_parent"
-            android:layout_height="match_parent">
-
-        </ListView>
+            android:layout_height="match_parent"/>
 
     </LinearLayout>
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

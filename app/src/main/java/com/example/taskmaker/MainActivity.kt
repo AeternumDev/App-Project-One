@@ -1,18 +1,18 @@
-package com.example.appprojectone
+package com.aeternumindustries.taskmaker
 
-import TaskAdapter
+import com.aeternumindustries.taskmaker.TaskAdapter
 import android.os.Bundle
 import android.text.InputType
 import android.widget.ArrayAdapter
 import android.widget.EditText
 import android.widget.ListView
-import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import com.example.appprojectone.databinding.ActivityMainBinding
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import android.content.Context
 import android.view.inputmethod.InputMethodManager
+import com.aeternumindustries.taskmaker.R
+import com.aeternumindustries.taskmaker.databinding.ActivityMainBinding
 
 // Import statements: These help the code understand where to get certain tools and definitions
 // They referencing a dictionary to understand the meaning of a word.
@@ -80,7 +80,7 @@ class MainActivity : AppCompatActivity() {
             val listItem = lvtodolist.getChildAt(position - lvtodolist.firstVisiblePosition)
             val taskEditText = listItem?.findViewById<EditText>(R.id.taskDescription)
             taskEditText?.requestFocus()
-            val imm: InputMethodManager = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+            val imm: InputMethodManager = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
             imm.showSoftInput(taskEditText, InputMethodManager.SHOW_IMPLICIT)
         }
 

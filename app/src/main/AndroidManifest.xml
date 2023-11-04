@@ -13,9 +13,8 @@
         android:theme="@style/Theme.AppProjectOne"
         tools:targetApi="31">
         <activity
-            android:name="com.example.appprojectone.MainActivity"
+            android:name="com.aeternumindustries.taskmaker.MainActivity"
             android:exported="true"
-            android:label="@string/app_name"
             android:theme="@style/Theme.AppProjectOne">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
