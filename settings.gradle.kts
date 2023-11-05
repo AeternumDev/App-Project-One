@@ -13,6 +13,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "AppProjectOne"
+rootProject.name = "TaskMaker"
 include(":app")
  

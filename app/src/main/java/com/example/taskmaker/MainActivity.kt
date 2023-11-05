@@ -10,9 +10,15 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import android.content.Context
+import android.os.PersistableBundle
 import android.view.inputmethod.InputMethodManager
 import com.aeternumindustries.taskmaker.R
 import com.aeternumindustries.taskmaker.databinding.ActivityMainBinding
+import androidx.appcompat.app.ActionBarDrawerToggle
+import androidx.drawerlayout.widget.DrawerLayout
+import androidx.appcompat.widget.Toolbar
+import com.google.android.material.navigation.NavigationView
+
 
 // Import statements: These help the code understand where to get certain tools and definitions
 // They referencing a dictionary to understand the meaning of a word.
@@ -27,6 +33,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var fab: FloatingActionButton
     private lateinit var shoppingItems: ArrayList<String>
     private lateinit var itemadapter: ArrayAdapter<String>
+    private lateinit var drawerLayout: DrawerLayout
+    private lateinit var toggle: ActionBarDrawerToggle
+    private lateinit var navigationView: NavigationView
 
     // This function sets up the main screen when the app starts
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -48,6 +57,8 @@ class MainActivity : AppCompatActivity() {
         // Setup the list adapter (a manager for the list)
         itemadapter = TaskAdapter(this, shoppingItems)
         lvtodolist.adapter = itemadapter
+
+
 
         // When the floating button is clicked, do the following:
         fab.setOnClickListener {
@@ -84,5 +95,15 @@ class MainActivity : AppCompatActivity() {
             imm.showSoftInput(taskEditText, InputMethodManager.SHOW_IMPLICIT)
         }
 
+            drawerLayout = findViewById(R.id.drawer_layout)
+            navigationView = findViewById(R.id.nav_view)
+
+            toggle = ActionBarDrawerToggle(this, drawerLayout, binding.materialToolbar, R.string.navigation_drawer_open,R.string.navigation_drawer_close)
+            drawerLayout.addDrawerListener(toggle)
+            toggle.syncState()
+    }
+    override fun onPostCreate(savedInstanceState: Bundle?) {
+        super.onPostCreate(savedInstanceState)
+        toggle.syncState()
     }
 }
