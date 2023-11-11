@@ -9,13 +9,12 @@ import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.Toast
-import com.aeternumindustries.taskmaker.MainActivity
+import com.example.taskmaker.MainActivity
 import android.text.TextWatcher
 import android.text.Editable
 import android.text.InputType
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
-import com.aeternumindustries.taskmaker.R
 
 
 // This class is like a helper for the main screen to display the list of tasks

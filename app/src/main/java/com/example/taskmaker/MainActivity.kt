@@ -1,4 +1,4 @@
-package com.aeternumindustries.taskmaker
+package com.example.taskmaker
 
 import com.aeternumindustries.taskmaker.TaskAdapter
 import android.os.Bundle
@@ -17,6 +17,7 @@ import com.aeternumindustries.taskmaker.databinding.ActivityMainBinding
 import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.appcompat.widget.Toolbar
+import androidx.compose.runtime.Composable
 import com.google.android.material.navigation.NavigationView
 
 
