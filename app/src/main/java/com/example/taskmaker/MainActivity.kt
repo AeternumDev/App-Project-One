@@ -42,6 +42,14 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Load tasks from SharedPreferences
+        val sharedPref = getSharedPreferences("task_preferences", Context.MODE_PRIVATE)
+        val savedTasks = sharedPref.getStringSet("tasks", null)
+        shoppingItems = if (savedTasks != null) {
+            ArrayList(savedTasks) // Load saved tasks if available
+        } else {
+            arrayListOf("Apfel", "Birne") // Default items if none saved
+        }
         // This connects the visual design file to this code
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -49,11 +57,6 @@ class MainActivity : AppCompatActivity() {
         // Connect the visual parts of the app to the code variables
         lvtodolist = findViewById(R.id.lvtodolist)
         fab = findViewById(R.id.floatingActionButton)
-
-        // Initialize the shopping list with two items
-        shoppingItems = ArrayList()
-        shoppingItems.add("Apfel")
-        shoppingItems.add("Birne")
 
         // Setup the list adapter (a manager for the list)
         itemadapter = TaskAdapter(this, shoppingItems)
@@ -77,6 +80,8 @@ class MainActivity : AppCompatActivity() {
             builder.setPositiveButton("Add Task") { dialog, which ->
                 shoppingItems.add(input.text.toString())
                 itemadapter.notifyDataSetChanged()
+                saveTasks() // Save the updated list
+
             }
 
             // If "Cancel" is clicked, just close the pop-up
@@ -103,6 +108,15 @@ class MainActivity : AppCompatActivity() {
             drawerLayout.addDrawerListener(toggle)
             toggle.syncState()
     }
+
+    fun saveTasks() {
+        val sharedPref = getSharedPreferences("task_preferences", Context.MODE_PRIVATE)
+        with(sharedPref.edit()) {
+            putStringSet("tasks", shoppingItems.toSet())
+            apply()
+        }
+    }
+
     override fun onPostCreate(savedInstanceState: Bundle?) {
         super.onPostCreate(savedInstanceState)
         toggle.syncState()

@@ -5,7 +5,13 @@
         android:right="16dp">
         <shape
             android:shape="rectangle">
-            <solid android:color="#673AB7"/>
+            <gradient
+                android:centerColor="#5F30DB"
+                android:endColor="#A739E9"
+                android:startColor="#5F30DB"
+                android:angle="225" />
+
+
             <corners
                 android:topLeftRadius="20dp"
                 android:topRightRadius="20dp"

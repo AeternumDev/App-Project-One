@@ -25,6 +25,7 @@
                 android:background="@drawable/rounded_toolbar_bg"
                 android:minHeight="?attr/actionBarSize"
                 android:theme="?attr/actionBarTheme"
+                android:paddingStart="16dp"
                 app:subtitleTextAppearance="@style/TextAppearance.AppCompat.Body1"
                 app:title="TaskMaster"
                 app:titleCentered="true"

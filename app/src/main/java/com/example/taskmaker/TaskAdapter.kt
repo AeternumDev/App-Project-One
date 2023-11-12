@@ -90,6 +90,7 @@ class TaskAdapter(private val context: MainActivity, private val taskList: Array
         deleteButton.setOnClickListener {
             taskList.removeAt(position)
             notifyDataSetChanged()
+            context.saveTasks() // Save the updated list
             Toast.makeText(context, "Task deleted", Toast.LENGTH_SHORT).show()
         }
 
