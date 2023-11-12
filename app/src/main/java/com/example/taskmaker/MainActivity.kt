@@ -1,24 +1,24 @@
 package com.example.taskmaker
 
-import com.aeternumindustries.taskmaker.TaskAdapter
+import android.content.Context
 import android.os.Bundle
 import android.text.InputType
+import android.view.inputmethod.InputMethodManager
 import android.widget.ArrayAdapter
 import android.widget.EditText
 import android.widget.ListView
+import androidx.annotation.RequiresApi
+import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import com.google.android.material.floatingactionbutton.FloatingActionButton
-import android.content.Context
-import android.os.PersistableBundle
-import android.view.inputmethod.InputMethodManager
-import com.aeternumindustries.taskmaker.R
-import com.aeternumindustries.taskmaker.databinding.ActivityMainBinding
-import androidx.appcompat.app.ActionBarDrawerToggle
+import androidx.compose.ui.platform.ComposeView
 import androidx.drawerlayout.widget.DrawerLayout
-import androidx.appcompat.widget.Toolbar
-import androidx.compose.runtime.Composable
+import com.aeternumindustries.taskmaker.R
+import com.aeternumindustries.taskmaker.TaskAdapter
+import com.aeternumindustries.taskmaker.databinding.ActivityMainBinding
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.navigation.NavigationView
+
 
 
 // Import statements: These help the code understand where to get certain tools and definitions
@@ -39,6 +39,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var navigationView: NavigationView
 
     // This function sets up the main screen when the app starts
+
+    @RequiresApi(34)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -53,6 +55,11 @@ class MainActivity : AppCompatActivity() {
         // This connects the visual design file to this code
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        val composeView = findViewById<ComposeView>(R.id.compose_view)
+        composeView.setContent {
+            CustomCalendar() // This is your Composable function
+        }
 
         // Connect the visual parts of the app to the code variables
         lvtodolist = findViewById(R.id.lvtodolist)
