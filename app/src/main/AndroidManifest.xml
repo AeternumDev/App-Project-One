@@ -10,13 +10,13 @@
         android:label="TaskMaster"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.AppProjectOne"
+        android:theme="@style/AppTheme"
         tools:targetApi="31">
         <activity
             android:name="com.example.taskmaker.NavigationDrawerActivity"
             android:exported="false"
             android:label="@string/title_activity_navigation_drawer"
-            android:theme="@style/Theme.AppProjectOne.NoActionBar" />
+            android:theme="@style/AppTheme" />
         <activity
             android:name="com.example.taskmaker.MainActivity"
             android:exported="true"

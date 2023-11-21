@@ -10,7 +10,11 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.with
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,12 +28,15 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Button
+import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -38,19 +45,8 @@ import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.time.temporal.WeekFields
 import java.util.*
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.Button
-import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+
+
 
 
 // This annotation specifies that the following function requires a minimum API level of 34 to work.
@@ -83,6 +79,11 @@ fun CustomCalendar() {
 @Composable
 fun MonthNavigation(currentMonth: YearMonth, onMonthChange: (Int) -> Unit) {
     val formatter = DateTimeFormatter.ofPattern("MMMM yyyy")
+    val textColor = if (isSystemInDarkTheme()) {
+        Color.White // Use white color in dark theme
+    } else {
+        MaterialTheme.colors.onBackground // Use default color in light theme
+    }
     Row(
         horizontalArrangement = Arrangement.SpaceBetween,
         modifier = Modifier.fillMaxWidth()
@@ -96,7 +97,7 @@ fun MonthNavigation(currentMonth: YearMonth, onMonthChange: (Int) -> Unit) {
 
         Text(
             text = currentMonth.format(formatter),
-            color = MaterialTheme.colors.onBackground,
+            color = textColor,
             fontSize = 20.sp,
             modifier = Modifier
                 .weight(1f)
@@ -166,6 +167,12 @@ fun CalendarGrid(month: YearMonth) {
     val daysInMonth = getDaysInMonth(month)
     var selectedDate by remember { mutableStateOf<LocalDate?>(null) }
 
+    // Determine the text color based on the theme
+    val textColor = if (isSystemInDarkTheme()) {
+        Color.White // Use white color in dark theme
+    } else {
+        MaterialTheme.colors.onBackground // Use default color in light theme
+    }
 
     // Updated AnimatedContent with only slide animation
     AnimatedContent(
@@ -202,10 +209,9 @@ fun CalendarGrid(month: YearMonth) {
                     ) {
                         Text(
                             text = day.dayOfMonth.toString(),
-                            color = if (day == selectedDate) MaterialTheme.colors.onSecondary else MaterialTheme.colors.onBackground,
-                            fontSize = 12.sp) // Adjust font size as needed
-
-                }
+                            color = if (day == selectedDate) MaterialTheme.colors.onSecondary else textColor,
+                            fontSize = 15.sp
+                        )
             }
         }
     }
@@ -228,8 +234,9 @@ fun getDaysInMonth(currentMonth: YearMonth) {
     while (lastVisibleDay.dayOfWeek != firstDayOfWeek.minus(1))
         lastVisibleDay = lastVisibleDay.plusDays(1)
     }
-}
 
+    }
+}
 
 
     // Return the list of days from the first to the last visible day.

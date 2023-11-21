@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
+    <color name="status_bar_color">#FFFFFF</color> <!-- White color -->
     <color name="textOnLight">#000000</color> <!-- Dark color for light theme -->
     <color name="textOnDark">#FFFFFF</color> <!-- Light color for dark theme -->
 

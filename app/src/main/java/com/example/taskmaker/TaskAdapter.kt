@@ -1,20 +1,21 @@
-package com.aeternumindustries.taskmaker
+/* package com.aeternumindustries.taskmaker
+
 
 import android.content.Context
+import android.text.Editable
+import android.text.InputType
+import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.Toast
 import com.example.taskmaker.MainActivity
-import android.text.TextWatcher
-import android.text.Editable
-import android.text.InputType
-import android.view.inputmethod.EditorInfo
-import android.view.inputmethod.InputMethodManager
 
 
 // This class is like a helper for the main screen to display the list of tasks
@@ -96,4 +97,4 @@ class TaskAdapter(private val context: MainActivity, private val taskList: Array
 
         return listItem
     }
-}
+*/
