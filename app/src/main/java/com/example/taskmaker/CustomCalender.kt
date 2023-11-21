@@ -38,6 +38,20 @@ import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.time.temporal.WeekFields
 import java.util.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.Button
+import androidx.compose.material.ButtonDefaults
+import androidx.compose.material.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+
 
 // This annotation specifies that the following function requires a minimum API level of 34 to work.
 @RequiresApi(34)
@@ -65,6 +79,7 @@ fun CustomCalendar() {
 }
 
 // GRID
+
 @Composable
 fun MonthNavigation(currentMonth: YearMonth, onMonthChange: (Int) -> Unit) {
     val formatter = DateTimeFormatter.ofPattern("MMMM yyyy")
@@ -73,35 +88,46 @@ fun MonthNavigation(currentMonth: YearMonth, onMonthChange: (Int) -> Unit) {
         modifier = Modifier.fillMaxWidth()
             .padding(horizontal = 18.dp)
             .padding(vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Button(
-            onClick = { onMonthChange(-1) },
-            shape = CircleShape,
-            modifier = Modifier.size(50.dp)
-        ) {
-            Text("<")
+        StyledButton(onClick = { onMonthChange(-1) }) {
+            Text("◀", fontSize = 20.sp)
         }
-        // Displaying the month only once
+
         Text(
             text = currentMonth.format(formatter),
             color = MaterialTheme.colors.onBackground,
             fontSize = 20.sp,
             modifier = Modifier
-                .weight(1f) // Takes up the remaining space in the Row
-                .wrapContentWidth(Alignment.CenterHorizontally) // Centers the text horizontally
-
+                .weight(1f)
+                .wrapContentWidth(Alignment.CenterHorizontally)
         )
-        Button(
-            onClick = { onMonthChange(1) },
-            shape = CircleShape,
-            modifier = Modifier.size(50.dp)
-        ) {
-            Text(">")
+
+        StyledButton(onClick = { onMonthChange(1) }) {
+            Text("▶", fontSize = 20.sp)
         }
     }
 }
 
+@Composable
+fun StyledButton(onClick: () -> Unit, content: @Composable () -> Unit) {
+    Button(
+        onClick = onClick,
+        shape = RoundedCornerShape(10.dp),
+        modifier = Modifier.size(50.dp),
+        colors = ButtonDefaults.buttonColors(
+            backgroundColor = Color(0xFF5F30DB),
+            contentColor = Color.White
+        ),
+        elevation = ButtonDefaults.elevation(
+            defaultElevation = 4.dp,
+            pressedElevation = 6.dp
+        ),
+        border = BorderStroke(1.dp, Color(0xFF5F30DB))
+    ) {
+        content()
+    }
+}
 
 // Function to get all days in a month as a list of LocalDate
 @RequiresApi(34)
@@ -138,6 +164,7 @@ fun getDaysInMonth(currentMonth: YearMonth): List<LocalDate> {
 @Composable
 fun CalendarGrid(month: YearMonth) {
     val daysInMonth = getDaysInMonth(month)
+    var selectedDate by remember { mutableStateOf<LocalDate?>(null) }
 
 
     // Updated AnimatedContent with only slide animation
@@ -149,6 +176,8 @@ fun CalendarGrid(month: YearMonth) {
                 .using(SizeTransform(clip = false))
         }, label = ""
     ) { targetMonth ->
+        val daysInTargetMonth = getDaysInMonth(targetMonth) // Calculate days for the target month
+
         Box(
             modifier = Modifier
                 .fillMaxWidth() // Fill the maximum width
@@ -156,19 +185,26 @@ fun CalendarGrid(month: YearMonth) {
             contentAlignment = Alignment.Center // Align the content to the center
         ) {
             LazyVerticalGrid(
-                columns = GridCells.Fixed(7),
-                contentPadding = PaddingValues(8.dp)
+                columns = GridCells.Fixed(7), // 7 columns for 7 days
+                contentPadding = PaddingValues(5.dp) // Padding around the grid
             ) {
-                items(getDaysInMonth(targetMonth)) { day ->
+                items(daysInMonth) { day ->
                     Box(
                         modifier = Modifier
-                            .padding(10.dp)
-                            .fillMaxWidth(), // Fill the maximum width of the grid cell
-                        contentAlignment = Alignment.Center // Center the content within the box
+                            .size(40.dp) // Fixed size for each cell
+                            .background(
+                                if (day == selectedDate) MaterialTheme.colors.primary else Color.Transparent,
+                                CircleShape
+                            )
+                            .clickable { selectedDate = day }
+                            .padding(8.dp), // Padding inside each cell
+                        contentAlignment = Alignment.Center
                     ) {
+                        Text(
+                            text = day.dayOfMonth.toString(),
+                            color = if (day == selectedDate) MaterialTheme.colors.onSecondary else MaterialTheme.colors.onBackground,
+                            fontSize = 12.sp) // Adjust font size as needed
 
-                        Text(text = day.dayOfMonth.toString(),
-                        color = MaterialTheme.colors.onBackground)
                 }
             }
         }
