@@ -156,4 +156,3 @@ class MainActivity : AppCompatActivity() {
         toggle.syncState() // Ensure the state of the toggle for the drawer is in sync
     }
 }
-

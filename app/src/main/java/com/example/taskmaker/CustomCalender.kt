@@ -212,32 +212,36 @@ fun CalendarGrid(month: YearMonth) {
                             color = if (day == selectedDate) MaterialTheme.colors.onSecondary else textColor,
                             fontSize = 15.sp
                         )
+                    }
+                }
             }
         }
-    }
-}
 
-// CALCULATION OF DAYS OF THE MONTH
-@RequiresApi(34)
-fun getDaysInMonth(currentMonth: YearMonth) {
-    // Calculate the first day to be displayed (might be in the previous month).
-    val firstOfMonth = currentMonth.atDay(1)
-    val firstDayOfWeek = WeekFields.of(Locale.getDefault()).firstDayOfWeek
-    var firstVisibleDay = firstOfMonth
-    while (firstVisibleDay.dayOfWeek != firstDayOfWeek) {
-        firstVisibleDay = firstVisibleDay.minusDays(1)
-    }
+        // CALCULATION OF DAYS OF THE MONTH
+        @RequiresApi(34)
+        fun getDaysInMonth(currentMonth: YearMonth) {
+            // Calculate the first day to be displayed (might be in the previous month).
+            val firstOfMonth = currentMonth.atDay(1)
+            val firstDayOfWeek = WeekFields.of(Locale.getDefault()).firstDayOfWeek
+            var firstVisibleDay = firstOfMonth
+            while (firstVisibleDay.dayOfWeek != firstDayOfWeek) {
+                firstVisibleDay = firstVisibleDay.minusDays(1)
+            }
 
-    // Calculate the last day to be displayed (might be in the next month).
-    val lastOfMonth = currentMonth.atEndOfMonth()
-    var lastVisibleDay = lastOfMonth
-    while (lastVisibleDay.dayOfWeek != firstDayOfWeek.minus(1))
-        lastVisibleDay = lastVisibleDay.plusDays(1)
-    }
+            // Calculate the last day to be displayed (might be in the next month).
+            val lastOfMonth = currentMonth.atEndOfMonth()
+            var lastVisibleDay = lastOfMonth
+            while (lastVisibleDay.dayOfWeek != firstDayOfWeek.minus(1))
+                lastVisibleDay = lastVisibleDay.plusDays(1)
+        }
 
     }
 }
 
 
-    // Return the list of days from the first to the last visible day.
+// Return the list of days from the first to the last visible day.
+
+
+
+// Return the list of days from the first to the last visible day.
 
