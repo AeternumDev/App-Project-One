@@ -140,13 +140,14 @@ class MainActivity : AppCompatActivity() {
                 .padding(vertical = 10.dp)
         ) {
             items(items = tasks, key = { it }) { task ->
-                var isVisible = remember { mutableStateOf(true) }
+                val isVisible = remember { mutableStateOf(true) }
 
                 TaskItem(task = task, isVisible = isVisible, onDelete = {
                     if (isVisible.value) { // Use isVisible.value instead of just isVisible
                         isVisible.value = false // Trigger exit animation
-                    } else {
+                    } else { // Delete the task after animation
                         tasks.remove(task) // Remove the task after animation
+                        saveTasks() // Save the
                     }
                 })
 
@@ -191,6 +192,7 @@ class MainActivity : AppCompatActivity() {
                     onClick = {
                         isVisible.value = false // Update visibility
                         onDelete(task)
+                        
                     },
                     modifier = Modifier.align(Alignment.CenterVertically)
                 ) {
