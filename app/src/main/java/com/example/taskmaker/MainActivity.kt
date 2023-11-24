@@ -19,6 +19,13 @@ import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.*
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
@@ -27,23 +34,19 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import com.aeternumindustries.taskmaker.R
 import com.aeternumindustries.taskmaker.databinding.ActivityMainBinding
+import com.example.taskmaker.ui.theme.TaskMakerTheme
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.navigation.NavigationView
 import kotlinx.coroutines.delay
 
-// Import statements: These help the code understand where to get certain tools and definitions
-// They referencing a dictionary to understand the meaning of a word.
-// The main screen of the app
+
 class MainActivity : AppCompatActivity() {
 
-    // 'tasks' holds the list of task strings. It's a state list, which means Compose will
-    // automatically update the UI when this list changes.
     private var tasks = mutableStateListOf<String>()
-
-    // lateinit vars for various UI components
     private lateinit var binding: ActivityMainBinding
     private lateinit var fab: FloatingActionButton
     private lateinit var drawerLayout: DrawerLayout
@@ -51,167 +54,69 @@ class MainActivity : AppCompatActivity() {
     private lateinit var navigationView: NavigationView
     private var showAddTaskDialog by mutableStateOf(false)
 
-
     @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Load previously saved tasks from SharedPreferences, a key-value storage
+
+
         val sharedPref = getSharedPreferences("task_preferences", Context.MODE_PRIVATE)
         val savedTasks = sharedPref.getStringSet("tasks", null)
-        tasks.addAll(savedTasks ?: listOf("Apfel", "Birne")) // Load saved tasks or default ones
+
+        tasks.addAll(savedTasks ?: listOf("Apfel", "Birne"))
         showAddTaskDialog = false
 
-        // Inflate the layout defined in XML and set it as the content view
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Initialize UI components by finding them in the layout
-
         drawerLayout = findViewById(R.id.drawer_layout)
         navigationView = findViewById(R.id.nav_view)
-        toggle = ActionBarDrawerToggle(this, drawerLayout, binding.materialToolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close)
+        toggle = ActionBarDrawerToggle(this, drawerLayout, R.string.navigation_drawer_open, R.string.navigation_drawer_close)
 
-        // Set up the navigation drawer (side menu)
         drawerLayout.addDrawerListener(toggle)
         toggle.syncState()
 
-        // Set the Compose UI content within the designated ComposeView in the XML layout
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+
+
         binding.composeView.setContent {
-            TaskListScreen(tasks)
-            if (showAddTaskDialog) {
-                AddTaskDialog(onAdd = { task ->
-                    tasks.add(task)
-                    showAddTaskDialog = false
-                    saveTasks()
-                }, onDismiss = {
-                    showAddTaskDialog = false
-                })
+            TaskMakerTheme { // Apply Material 3 theming
+                // Your existing Compose content
+                TaskListScreen(tasks)
+                if (showAddTaskDialog) {
+                    AddTaskDialog(onAdd = { task ->
+                        tasks.add(task)
+                        showAddTaskDialog = false
+                        saveTasks()
+                    }, onDismiss = { showAddTaskDialog = false })
+                }
             }
         }
     }
 
-    // This Composable function defines the UI layout for the task list screen
+    @Composable
+    fun AppTheme(content: @Composable () -> Unit) {
+        val colorScheme = lightColorScheme(
+            primary = Color(0xFFFFFFFF), // Example primary color
+            onPrimary = Color.White, // Content color for primary
+            // Define other colors as needed
+            surfaceVariant = Color.White     // This is the color we want for the status bar
+        )
+
+        MaterialTheme(
+            colorScheme = colorScheme,
+            content = content
+        )
+    }
+
     @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     @Preview(showBackground = true)
     @Composable
     fun PreviewTaskListScreen() {
-        val tasks = remember { mutableStateListOf("Task 1", "Task 2", "Task 3") }
-        TaskListScreen(tasks = tasks)
+        val previewTasks = remember { mutableStateListOf("Task 1", "Task 2", "Task 3") }
+        TaskListScreen(previewTasks)
     }
 
-    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
-    @Composable
-    fun TaskListScreen(tasks: SnapshotStateList<String>) {
-        // Scaffold is used to provide material design components
-        Scaffold(
-            floatingActionButton = {
-                FloatingActionButton(
-                    onClick = { showAddTaskDialog = true },
-                    shape = RoundedCornerShape(16.dp),
-                    backgroundColor = Color(0xFF5F30DB),
-                    modifier = Modifier
-                        .padding(horizontal = 5.dp, vertical = 80.dp)) {
-                    Icon(
-                        Icons.Default.Add, "Floating action button.",
-                        tint = Color.White)
-                }
-            },
-            content = { paddingValues ->
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(paddingValues)
-                ) {
-                    CustomCalendar() // This is a custom Composable for showing a calendar
-                    TaskList(tasks) // Composable function that displays the task list
-                }
-            }
-        )
-    }
-    // This Composable function displays the tasks in a LazyColumn (like RecyclerView)
-
-    @Composable
-    fun TaskList(tasks: SnapshotStateList<String>) {
-        LazyColumn(
-            modifier = Modifier
-                .padding(start = 10.dp, end = 10.dp)
-                .padding(horizontal = 8.dp)
-                .padding(vertical = 10.dp)
-        ) {
-            items(items = tasks, key = { it }) { task ->
-                val isVisible = remember { mutableStateOf(true) }
-
-                TaskItem(task = task, isVisible = isVisible, onDelete = {
-                    if (isVisible.value) { // Use isVisible.value instead of just isVisible
-                        isVisible.value = false // Trigger exit animation
-                    } else { // Delete the task after animation
-                        tasks.remove(task) // Remove the task after animation
-                        saveTasks() // Save the
-                    }
-                })
-
-                Divider(color = Color.LightGray, thickness = 1.dp)
-            }
-        }
-    }
-
-    // Defines the UI for each task item in the list
-    @Composable
-    fun TaskItem(task: String, onDelete: (String) -> Unit, isVisible: MutableState<Boolean>) {
-        val isVisibleValue = isVisible.value // Extract the value of isVisible
-
-        AnimatedVisibility(
-            visible = isVisibleValue, // Pass the extracted value to AnimatedVisibility
-            exit = fadeOut(animationSpec = tween(durationMillis = 300)) + shrinkVertically() // Add fade-out and shrink animations for exit
-        ) {
-            Row(
-                modifier = Modifier
-                    .animateContentSize() // Animate size changes
-                    .fillMaxWidth()
-                    .padding(vertical = 3.dp, horizontal = 0.dp)
-            ) {
-                // Determine the text color based on the theme
-                val textColor = if (isSystemInDarkTheme()) {
-                    Color.White // Use white color in dark theme
-                } else {
-                    MaterialTheme.colors.onBackground
-                    // Use default color in light theme
-                }
-
-                Text(
-                    text = task,
-                    color = textColor,
-                    fontSize = 16.sp,
-                    modifier = Modifier.align(Alignment.CenterVertically)
-                )
-
-                Spacer(Modifier.weight(1f)) // Spacer for pushing the delete button to the end
-
-                IconButton(
-                    onClick = {
-                        isVisible.value = false // Update visibility
-                        onDelete(task)
-                        
-                    },
-                    modifier = Modifier.align(Alignment.CenterVertically)
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Delete,
-                        contentDescription = "Delete",
-                        tint = Color(0xFF5F30DB)
-                    )
-                }
-
-                if (!isVisibleValue) { // Use isVisibleValue instead of isVisible
-                    LaunchedEffect(task) {
-                        delay(300) // Duration for exit animation
-                        onDelete(task)
-                    }
-                }
-            }
-        }
-    }
 
 
     @Composable
@@ -229,34 +134,148 @@ class MainActivity : AppCompatActivity() {
                 )
             },
             confirmButton = {
-                Button(onClick = { onAdd(text) }) {
+                Button(
+                    onClick = {
+                        onAdd(text)
+                        text = "" // Optional: Clear the text field after adding a task
+                    }
+                ) {
                     Text("Add")
                 }
             },
             dismissButton = {
-                Button(onClick = {
-                    // Check if a task has been added
-                    text = "" // Reset the text field
-                    showAddTaskDialog = true // Keep the dialog open
-                }) {
+                Button(
+                    onClick = onDismiss
+                ) {
                     Text("Cancel")
                 }
             }
-
-
         )
     }
-    // Function to save the current state of tasks to SharedPreferences
     private fun saveTasks() {
         val sharedPref = getSharedPreferences("task_preferences", Context.MODE_PRIVATE)
         with(sharedPref.edit()) {
-            putStringSet("tasks", tasks.toSet()) // Convert the task list to a set and save it
-            apply() // Apply the changes
+            putStringSet("tasks", tasks.toSet())
+            apply()
+        }
+    }
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    @Composable
+    fun TaskListScreen(tasks: SnapshotStateList<String>) {
+        val myAppColorScheme = lightColorScheme(
+            primary = Color(0xFF6750A4), // Light purple color
+            onPrimary = Color.White,
+            background = Color.White, // Set background color to pure white
+            surface = Color.White,    // Set surface color to pure white for the AppBar
+            onSurface = Color.Black   // Set content color for AppBar, choose a color that contrasts well with white
+            // Add other color definitions as needed
+        )
+
+        MaterialTheme(colorScheme = myAppColorScheme) {
+            Scaffold(
+                topBar = {
+                    CenterAlignedTopAppBar(
+                        title = { Text("Calendo", color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.padding(vertical = 10.dp)) },
+                        // Set the background color of the AppBar
+                        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            titleContentColor = MaterialTheme.colorScheme.onSurface,
+                            actionIconContentColor = MaterialTheme.colorScheme.onSurface
+                        ),
+                        modifier = Modifier.height(48.dp)
+                    )
+                },
+
+                floatingActionButton = {
+                    FloatingActionButton(
+                        onClick = { showAddTaskDialog = true },
+                        shape = RoundedCornerShape(16.dp),
+                        backgroundColor = Color(0xFF6750A4),
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp)
+                    ) {
+                        Icon(Icons.Default.Add, "Floating action button.", tint = Color.White)
+                    }
+                },
+                content = { paddingValues ->
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(paddingValues)
+                    ) {
+                        CustomCalendar() // Assuming this is a custom Composable function
+                        TaskList(tasks)
+                    }
+                }
+            )
+        }
+    }
+
+
+
+
+    @Composable
+    fun TaskList(tasks: SnapshotStateList<String>) {
+        LazyColumn(
+            modifier = Modifier
+                .padding(start = 10.dp, end = 10.dp)
+                .padding(horizontal = 8.dp)
+                .padding(vertical = 10.dp)
+        ) {
+            items(items = tasks, key = { it }) { task ->
+                val isVisible = remember { mutableStateOf(true) }
+                TaskItem(task = task, isVisible = isVisible, onDelete = {
+                    if (isVisible.value) {
+                        isVisible.value = false
+                    } else {
+                        tasks.remove(task)
+                        saveTasks()
+                    }
+                })
+                Divider(color = Color.LightGray, thickness = 1.dp)
+            }
+        }
+    }
+
+    @Composable
+    fun TaskItem(task: String, isVisible: MutableState<Boolean>, onDelete: (String) -> Unit) {
+        val isVisibleValue = isVisible.value
+
+        AnimatedVisibility(
+            visible = isVisibleValue,
+            exit = fadeOut(animationSpec = tween(durationMillis = 300)) + shrinkVertically()
+        ) {
+            Row(
+                modifier = Modifier
+                    .animateContentSize()
+                    .fillMaxWidth()
+                    .padding(vertical = 3.dp, horizontal = 0.dp)
+            ) {
+                val textColor = if (isSystemInDarkTheme()) Color.White else MaterialTheme.colorScheme.onSurface
+                Text(text = task, color = textColor, fontSize = 16.sp, modifier = Modifier.align(Alignment.CenterVertically))
+                Spacer(Modifier.weight(1f))
+                IconButton(onClick = {
+                    isVisible.value = false
+                    onDelete(task)
+                }, modifier = Modifier.align(Alignment.CenterVertically)) {
+                    Icon(imageVector = Icons.Rounded.Delete, contentDescription = "Delete", tint = Color(0xFF6750A4))
+                }
+
+
+                if (!isVisibleValue) {
+                    LaunchedEffect(task) {
+                        delay(300)
+                        onDelete(task)
+                    }
+                }
+            }
         }
     }
 
     override fun onPostCreate(savedInstanceState: Bundle?) {
         super.onPostCreate(savedInstanceState)
-        toggle.syncState() // Ensure the state of the toggle for the drawer is in sync
+        toggle.syncState()
     }
 }
+

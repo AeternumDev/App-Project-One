@@ -1,5 +1,7 @@
 package com.example.taskmaker
 
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,9 +11,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.Button
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.Icon
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.OutlinedButton
 import androidx.compose.material.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -45,9 +52,14 @@ fun CustomCalendar() {
             currentMonth = currentMonth.plusMonths(direction.toLong())
         }
 
-        CalendarView(currentMonth)
+        Crossfade(targetState = currentMonth, animationSpec = tween(durationMillis = 500),
+            label = ""
+        ) { month ->
+            CalendarView(month)
+        }
     }
 }
+
 
 @Composable
 fun MonthNavigation(currentMonth: YearMonth, onMonthChange: (Int) -> Unit) {
@@ -57,20 +69,35 @@ fun MonthNavigation(currentMonth: YearMonth, onMonthChange: (Int) -> Unit) {
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
-        Button(onClick = { onMonthChange(-1) }) {
-            Text("<")
+        OutlinedButton(
+            onClick = { onMonthChange(-1) },
+            shape = RoundedCornerShape(12.dp))
+
+        {
+            Icon(
+                imageVector = Icons.Default.ArrowBack,
+                contentDescription = "Previous Month"
+            )
         }
 
         Text(
             text = "${currentMonth.month.getDisplayName(TextStyle.FULL, Locale.getDefault())} ${currentMonth.year}",
+            style = MaterialTheme.typography.h6,
             modifier = Modifier.align(Alignment.CenterVertically)
         )
 
-        Button(onClick = { onMonthChange(1) }) {
-            Text(">")
+        OutlinedButton(
+            onClick = { onMonthChange(1) },
+            shape = RoundedCornerShape(12.dp) // Adjust the corner radius as needed
+        ) {
+            Icon(
+                imageVector = Icons.Default.ArrowForward,
+                contentDescription = "Next Month"
+            )
         }
     }
 }
+
 
 @Composable
 fun CalendarView(currentMonth: YearMonth) {
@@ -86,11 +113,13 @@ fun CalendarView(currentMonth: YearMonth) {
 
 @Composable
 fun WeekRow(week: List<LocalDate>, currentMonth: YearMonth) {
-    Row(Modifier.fillMaxWidth()) {
+    Row(Modifier
+        .fillMaxWidth()
+        .padding(start = 5.dp, end = 5.dp)) {
         week.forEach { date ->
             Box(
                 modifier = Modifier
-                    .height(60.dp)
+                    .height(50.dp)
                     .weight(1f) // Add weight to each cell
                     .padding(4.dp),
                 contentAlignment = Alignment.Center
@@ -115,9 +144,10 @@ fun WeekRow(week: List<LocalDate>, currentMonth: YearMonth) {
 @Composable
 fun WeekdayHeaders() {
     val firstDayOfWeek = WeekFields.of(Locale.getDefault()).firstDayOfWeek
-    val daysOfWeek = listOf("M", "T", "W", "T", "F", "S", "S")
+    val daysOfWeek = listOf("M", "D", "M", "D", "F", "S", "S")
 
-    Row(modifier = Modifier.fillMaxWidth()) {
+    Row(modifier = Modifier.fillMaxWidth()
+        .padding(start = 5.dp, end = 5.dp)) {
         daysOfWeek.rotate(firstDayOfWeek.ordinal).forEach { day ->
             Text(
                 text = day,

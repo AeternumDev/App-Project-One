@@ -12,28 +12,6 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-        <com.google.android.material.appbar.AppBarLayout
-            android:id="@+id/appBarLayout"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp">
-
-            <com.google.android.material.appbar.MaterialToolbar
-                android:id="@+id/materialToolbar"
-                android:layout_width="match_parent"
-                android:layout_height="60dp"
-                android:background="@drawable/rounded_toolbar_bg"
-                android:minHeight="?attr/actionBarSize"
-                android:theme="?attr/actionBarTheme"
-                android:paddingStart="16dp"
-                app:subtitleTextAppearance="@style/TextAppearance.AppCompat.Body1"
-                app:title="TaskMaster"
-                app:titleCentered="true"
-                app:titleMargin="6dp"
-                app:titleTextAppearance="@style/TextAppearance.AppCompat.Display1"
-                app:titleTextColor="#FFFFFF"
-                app:layout_scrollFlags="scroll|enterAlways"/>
-        </com.google.android.material.appbar.AppBarLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -46,12 +24,6 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content" />
 
-            <ListView
-                android:id="@+id/lvtodolist"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent" >
-
-            </ListView>
 
         </LinearLayout>
 
