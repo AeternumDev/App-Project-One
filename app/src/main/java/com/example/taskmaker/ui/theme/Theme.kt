@@ -40,6 +40,7 @@ fun TaskMakerTheme(
     val statusBarColor = if (darkTheme) Color.Black else Color.White
     systemUiController.setSystemBarsColor(color = statusBarColor, darkIcons = !darkTheme)
 
+
     val colors = if (darkTheme) DarkColorScheme else LightColorScheme
 
     MaterialTheme(
@@ -47,3 +48,4 @@ fun TaskMakerTheme(
         content = content
     )
 }
+
