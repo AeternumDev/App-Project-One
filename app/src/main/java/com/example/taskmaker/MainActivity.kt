@@ -7,8 +7,12 @@ import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -19,6 +23,7 @@ import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -31,6 +36,7 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -47,6 +53,8 @@ class MainActivity : AppCompatActivity() {
     private var tasks = mutableStateListOf<String>()
     private lateinit var binding: ActivityMainBinding
     private var showAddTaskDialog by mutableStateOf(false)
+    private var completedTasks = mutableStateListOf<String>()
+
 
     @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -55,7 +63,6 @@ class MainActivity : AppCompatActivity() {
 
 
         binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding.root)
 
         setContentView(binding.root)
 
@@ -169,6 +176,12 @@ class MainActivity : AppCompatActivity() {
             // Add other color definitions as needed
         )
 
+        val onTaskCompleted: (String) -> Unit = { task ->
+            tasks.remove(task)
+            completedTasks.add(task)
+        }
+
+
         MaterialTheme(colorScheme = myAppColorScheme) {
             val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
             val coroutineScope = rememberCoroutineScope() // Create a coroutine scope
@@ -220,13 +233,76 @@ class MainActivity : AppCompatActivity() {
                             .fillMaxWidth()
                             .padding(paddingValues)
                     ) {
-                        CustomCalendar() // Assuming this is a custom Composable function
-                        TaskList(tasks)
+                        CustomCalendar() // Your custom calendar component
+                        if (completedTasks.isNotEmpty()) {
+                            CompletedTaskSection(completedTasks)
+                        }
+
+                        TaskList(tasks, onTaskCompleted = onTaskCompleted)
                     }
                 }
             )
         }
     }
+//done/erledigt button
+    @Composable
+fun CompletedTaskSection(completedTasks: SnapshotStateList<String>) {
+    var expanded by remember { mutableStateOf(false) }
+    val lightGreen = Color(0xFFB2F2BB) // Example light green color
+
+    Card(
+        modifier = Modifier
+            .padding(8.dp)
+            // Smoother animation with FastOutSlowInEasing
+            .animateContentSize(animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing)),
+        shape = RoundedCornerShape(12.dp),
+        elevation = 0.dp,
+        backgroundColor = lightGreen
+    ) {
+        Column(modifier = Modifier.clickable { expanded = !expanded }) {
+            Text(
+                "Done",
+                modifier = Modifier.padding(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 8.dp),
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium
+            )
+
+            AnimatedVisibility(
+                visible = expanded,
+                enter = fadeIn(animationSpec = tween(durationMillis = 800)) +
+                        scaleIn(initialScale = 0.8f),
+                exit = fadeOut(animationSpec = tween(durationMillis = 800)) +
+                        scaleOut(targetScale = 0.8f)
+            ) {
+                Column {
+                    completedTasks.forEach { task ->
+                        TaskItemRow(task, onReactivateTask = {
+                            completedTasks.remove(task)
+                            tasks.add(task)
+                        })
+                    }
+                }
+            }
+        }
+    }
+}
+
+    @Composable
+    fun TaskItemRow(task: String, onReactivateTask: () -> Unit) {
+        Row {
+            Text(
+                text = task,
+                modifier = Modifier
+                    .padding(start = 16.dp, end = 16.dp, top = 4.dp)
+                    .weight(1f),
+                color = Color.Gray
+            )
+            IconButton(onClick = onReactivateTask) {
+                Icon(Icons.Default.Refresh, contentDescription = "Unmark as completed")
+            }
+        }
+    }
+
 
     @Composable
     fun DrawerContent(drawerState: DrawerState) {
@@ -270,7 +346,7 @@ class MainActivity : AppCompatActivity() {
 
 
     @Composable
-    fun TaskList(tasks: SnapshotStateList<String>) {
+    fun TaskList(tasks: SnapshotStateList<String>, onTaskCompleted: (String) -> Unit) {
         LazyColumn(
             modifier = Modifier
                 .padding(start = 10.dp, end = 10.dp)
@@ -285,18 +361,16 @@ class MainActivity : AppCompatActivity() {
                     } else {
                         tasks.remove(task)
                         saveTasks()
-
                     }
-                })
+                }, onTaskCompleted = onTaskCompleted)
                 Divider(color = Color.LightGray, thickness = 1.dp)
             }
         }
     }
 
-
-
+//Tasklist
     @Composable
-    fun TaskItem(task: String, isVisible: MutableState<Boolean>, onDelete: (String) -> Unit) {
+fun TaskItem(task: String, isVisible: MutableState<Boolean>, onDelete: (String) -> Unit, onTaskCompleted: (String) -> Unit) {
         val isVisibleValue = isVisible.value
         val isChecked =
             remember { mutableStateOf(false) } // State to keep track of the checkmark status
@@ -314,7 +388,14 @@ class MainActivity : AppCompatActivity() {
                 // Checkbox with a circle shape
                 Checkbox(
                     checked = isChecked.value,
-                    onCheckedChange = { isChecked.value = it },
+                    onCheckedChange = { checked ->
+                        isChecked.value = checked
+                        if (checked) {
+                            isVisible.value = false
+                            onTaskCompleted(task)
+                        }
+                    },
+
                     colors = CheckboxDefaults.colors(
                         checkedColor = MaterialTheme.colorScheme.primary,
                         uncheckedColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
