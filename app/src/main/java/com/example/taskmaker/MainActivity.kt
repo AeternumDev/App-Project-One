@@ -5,15 +5,9 @@ import android.os.Build
 import android.os.Bundle
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
@@ -34,8 +28,13 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.*
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -43,9 +42,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 import com.aeternumindustries.taskmaker.databinding.ActivityMainBinding
 import com.example.taskmaker.ui.theme.TaskMakerTheme
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-
 
 
 class MainActivity : AppCompatActivity() {
@@ -60,25 +57,23 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-
-
         binding = ActivityMainBinding.inflate(layoutInflater)
-
         setContentView(binding.root)
-
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
         binding.composeView.setContent {
-
             TaskMakerTheme { // Apply Material 3 theming
                 // Your existing Compose content
                 TaskListScreen(tasks)
                 if (showAddTaskDialog) {
-                    AddTaskDialog(onAdd = { task ->
-                        tasks.add(task)
-                        showAddTaskDialog = false
-                        saveTasks()
-                    }, onDismiss = { showAddTaskDialog = false })
+                    AddTaskDialog(
+                        showAddTaskDialog = showAddTaskDialog,
+                        onAdd = { task ->
+                            tasks.add(task)
+                            showAddTaskDialog = false
+                            saveTasks()
+                        }
+                    ) { showAddTaskDialog = false }
                 }
             }
         }
@@ -88,8 +83,17 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         val sharedPref = getSharedPreferences("task_preferences", Context.MODE_PRIVATE)
         val savedTasks = sharedPref.getStringSet("tasks", null)
-        if (savedTasks != null) {
-            tasks = mutableStateListOf<String>().apply { addAll(savedTasks) }
+        val savedCompletedTasks =
+            sharedPref.getStringSet("completedTasks", null) // Load completed tasks
+
+        savedTasks?.let {
+            tasks.clear()
+            tasks.addAll(it)
+        }
+
+        savedCompletedTasks?.let {
+            completedTasks.clear()
+            completedTasks.addAll(it)
         }
     }
 
@@ -117,50 +121,94 @@ class MainActivity : AppCompatActivity() {
         TaskListScreen(previewTasks)
     }
 
+
+    @OptIn(ExperimentalComposeUiApi::class)
     @Composable
-    fun AddTaskDialog(onAdd: (String) -> Unit, onDismiss: () -> Unit) {
+    fun AddTaskDialog(showAddTaskDialog: Boolean, onAdd: (String) -> Unit, onDismiss: () -> Unit) {
         var text by remember { mutableStateOf("") }
+        var priority by remember { mutableStateOf(1) } // Default to 1 (normal priority)
+        val keyboardController = LocalSoftwareKeyboardController.current
+        val focusRequester = remember { FocusRequester() }
 
-        AlertDialog(
-            onDismissRequest = onDismiss,
-            title = {
-                Text(
-                    "Task hinzufügen"
+        val prioritySymbol = when (priority) {
+            2 -> "!"
+            3 -> "!!"
+            4 -> "!!!"
+            else -> "" // No symbol for normal priority
+        }
 
-                )
-            },
-            text = {
-                OutlinedTextField(
-                    value = text,
-                    onValueChange = { text = it },
-                    label = { Text("Äpfel kaufen...") },
-                    singleLine = true,
-                    shape = RoundedCornerShape(8.dp) // Rounded corners for the TextField
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        onAdd(text)
-                        text = "" // Optional: Clear the text field after adding a task
+        if (showAddTaskDialog) {
+            AlertDialog(
+                onDismissRequest = {
+                    keyboardController?.hide()
+                    onDismiss()
+                },
+                title = {
+                    Text(text = "Task hinzufügen")
+                },
+                text = {
+                    Column {
+                        OutlinedTextField(
+                            value = text,
+                            onValueChange = { text = it },
+                            label = { Text("Task Description") },
+                            singleLine = true,
+                            modifier = Modifier.focusRequester(focusRequester)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("Priority:")
+                        Row {
+                            PriorityButton(priorityLabel = "!", setPriority = { priority = 2 })
+                            PriorityButton(priorityLabel = "!!", setPriority = { priority = 3 })
+                            PriorityButton(priorityLabel = "!!!", setPriority = { priority = 4 })
+                        }
                     }
-                ) {
-                    Text("Hinzufügen")
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = onDismiss
-                ) {
-                    Text("Abbrechen")
-                }
-            },
-            shape = RoundedCornerShape(16.dp), // Rounded corners for the dialog
-            backgroundColor = MaterialTheme.colorScheme.surface,
-            contentColor = MaterialTheme.colorScheme.onSurface
-        )
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            // Concatenate the task description with the priority symbol
+                            val taskWithPriority =
+                                text + if (prioritySymbol.isNotEmpty()) " ($prioritySymbol)" else ""
+                            if (taskWithPriority.isNotBlank()) {
+                                onAdd(taskWithPriority)
+                                text = "" // Clear the text field after adding a task
+                                priority = 1 // Reset to default (normal priority)
+                            }
+                            keyboardController?.hide()
+                        }
+                    ) {
+                        Text("Hinzufügen")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = {
+                        keyboardController?.hide()
+                        onDismiss()
+                    }) {
+                        Text("Abbrechen")
+                    }
+                },
+                shape = RoundedCornerShape(8.dp)
+            )
+
+            // Launch effect to request focus and show keyboard
+            LaunchedEffect(Unit) {
+                focusRequester.requestFocus()
+                keyboardController?.show()
+            }
+        }
     }
 
+    @Composable
+    fun PriorityButton(priorityLabel: String, setPriority: () -> Unit) {
+        Button(
+            onClick = setPriority,
+            modifier = Modifier.padding(end = 8.dp)
+        ) {
+            Text(priorityLabel)
+        }
+    }
 
 
     @OptIn(ExperimentalMaterial3Api::class)
@@ -190,7 +238,13 @@ class MainActivity : AppCompatActivity() {
 
                 topBar = {
                     CenterAlignedTopAppBar(
-                        title = { Text("Calendo", modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.onSurface) },
+                        title = {
+                            Text(
+                                "Calendo",
+                                modifier = Modifier.padding(vertical = 8.dp),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        },
                         navigationIcon = {
                             IconButton(onClick = {
                                 coroutineScope.launch {
@@ -200,7 +254,8 @@ class MainActivity : AppCompatActivity() {
                                 Icon(
                                     Icons.Filled.Menu,
                                     contentDescription = "Menu",
-                                    modifier = Modifier.size(25.dp))
+                                    modifier = Modifier.size(25.dp)
+                                )
                             }
                         },
                         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
@@ -244,48 +299,63 @@ class MainActivity : AppCompatActivity() {
             )
         }
     }
-//done/erledigt button
+
+    //done/erledigt button
     @Composable
-fun CompletedTaskSection(completedTasks: SnapshotStateList<String>) {
-    var expanded by remember { mutableStateOf(false) }
-    val lightGreen = Color(0xFFB2F2BB) // Example light green color
+    fun CompletedTaskSection(completedTasks: SnapshotStateList<String>) {
+        var expanded by remember { mutableStateOf(false) }
+        val lightGreen = Color(0xFFB2F2BB)
 
-    Card(
-        modifier = Modifier
-            .padding(8.dp)
-            // Smoother animation with FastOutSlowInEasing
-            .animateContentSize(animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing)),
-        shape = RoundedCornerShape(12.dp),
-        elevation = 0.dp,
-        backgroundColor = lightGreen
-    ) {
-        Column(modifier = Modifier.clickable { expanded = !expanded }) {
-            Text(
-                "Done",
-                modifier = Modifier.padding(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 8.dp),
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium
-            )
+        val animationProgress by animateFloatAsState(
+            targetValue = if (expanded) 1f else 0f,
+            // Increase the duration for a smoother transition
+            animationSpec = tween(durationMillis = 800, easing = FastOutSlowInEasing), label = ""
+        )
 
-            AnimatedVisibility(
-                visible = expanded,
-                enter = fadeIn(animationSpec = tween(durationMillis = 800)) +
-                        scaleIn(initialScale = 0.8f),
-                exit = fadeOut(animationSpec = tween(durationMillis = 800)) +
-                        scaleOut(targetScale = 0.8f)
-            ) {
-                Column {
-                    completedTasks.forEach { task ->
-                        TaskItemRow(task, onReactivateTask = {
-                            completedTasks.remove(task)
-                            tasks.add(task)
-                        })
+        Card(
+            modifier = Modifier
+                .padding(8.dp)
+                .graphicsLayer {
+                    // Scale the card based on the animation progress
+                    scaleX = lerp(start = 0.95f, stop = 1f, fraction = animationProgress)
+                    scaleY = lerp(start = 0.95f, stop = 1f, fraction = animationProgress)
+                    // Adjust the alpha value based on the animation progress
+                    alpha = lerp(start = 0.7f, stop = 1f, fraction = animationProgress)
+                },
+            shape = RoundedCornerShape(12.dp),
+            elevation = 0.dp,
+            backgroundColor = lightGreen
+        ) {
+            Column(modifier = Modifier.clickable { expanded = !expanded }) {
+                Text(
+                    "Done",
+                    modifier = Modifier.padding(
+                        start = 16.dp,
+                        top = 8.dp,
+                        end = 16.dp,
+                        bottom = 8.dp
+                    ),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium
+                )
+
+                if (expanded) {
+                    Column {
+                        completedTasks.forEach { task ->
+                            TaskItemRow(task, onReactivateTask = {
+                                completedTasks.remove(task)
+                                tasks.add(task)
+                            })
+                        }
                     }
                 }
             }
         }
     }
-}
+
+    fun lerp(start: Float, stop: Float, fraction: Float): Float {
+        return (1 - fraction) * start + fraction * stop
+    }
 
     @Composable
     fun TaskItemRow(task: String, onReactivateTask: () -> Unit) {
@@ -340,6 +410,7 @@ fun CompletedTaskSection(completedTasks: SnapshotStateList<String>) {
         val sharedPref = getSharedPreferences("task_preferences", Context.MODE_PRIVATE)
         with(sharedPref.edit()) {
             putStringSet("tasks", tasks.toSet())
+            putStringSet("completedTasks", completedTasks.toSet()) // Save completed tasks
             apply()
         }
     }
@@ -353,9 +424,9 @@ fun CompletedTaskSection(completedTasks: SnapshotStateList<String>) {
                 .padding(horizontal = 8.dp)
                 .padding(vertical = 10.dp)
         ) {
-            items(items = tasks, key = { it }) { task ->
+            itemsIndexed(items = tasks) { index, task ->
                 val isVisible = remember { mutableStateOf(true) }
-                TaskItem(task = task, isVisible = isVisible, onDelete = {
+                TaskItem(task = task, onDelete = {
                     if (isVisible.value) {
                         isVisible.value = false
                     } else {
@@ -368,71 +439,56 @@ fun CompletedTaskSection(completedTasks: SnapshotStateList<String>) {
         }
     }
 
-//Tasklist
+    //Tasklist
     @Composable
-fun TaskItem(task: String, isVisible: MutableState<Boolean>, onDelete: (String) -> Unit, onTaskCompleted: (String) -> Unit) {
-        val isVisibleValue = isVisible.value
+    fun TaskItem(
+        task: String,
+        onDelete: (String) -> Unit,
+        onTaskCompleted: (String) -> Unit
+    ) {
         val isChecked =
             remember { mutableStateOf(false) } // State to keep track of the checkmark status
 
-        AnimatedVisibility(
-            visible = isVisibleValue,
-            exit = fadeOut(animationSpec = tween(durationMillis = 300)) + shrinkVertically()
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 3.dp, horizontal = 0.dp)
         ) {
-            Row(
-                modifier = Modifier
-                    .animateContentSize()
-                    .fillMaxWidth()
-                    .padding(vertical = 3.dp, horizontal = 0.dp)
-            ) {
-                // Checkbox with a circle shape
-                Checkbox(
-                    checked = isChecked.value,
-                    onCheckedChange = { checked ->
-                        isChecked.value = checked
-                        if (checked) {
-                            isVisible.value = false
-                            onTaskCompleted(task)
-                        }
-                    },
-
-                    colors = CheckboxDefaults.colors(
-                        checkedColor = MaterialTheme.colorScheme.primary,
-                        uncheckedColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                    ),
-                    modifier = Modifier.padding(end = 8.dp).align(Alignment.CenterVertically)
-
-                )
-
-                val textColor =
-                    if (isSystemInDarkTheme()) Color.White else MaterialTheme.colorScheme.onSurface
-                Text(
-                    text = task,
-                    color = textColor,
-                    fontSize = 16.sp,
-                    modifier = Modifier.align(Alignment.CenterVertically)
-                )
-                Spacer(Modifier.weight(1f))
-                IconButton(onClick = {
-                    isVisible.value = false
-                    onDelete(task)
-                }, modifier = Modifier.align(Alignment.CenterVertically)) {
-                    Icon(
-                        imageVector = Icons.Rounded.Delete,
-                        contentDescription = "Delete",
-                        tint = Color(0xFF6750A4)
-                    )
-                }
-
-                if (!isVisibleValue) {
-                    LaunchedEffect(task) {
-                        delay(300)
-                        onDelete(task)
+            // Checkbox with a circle shape
+            Checkbox(
+                checked = isChecked.value,
+                onCheckedChange = { checked ->
+                    isChecked.value = checked
+                    if (checked) {
+                        onTaskCompleted(task)
                     }
-                }
+                },
+                colors = CheckboxDefaults.colors(
+                    checkedColor = MaterialTheme.colorScheme.primary,
+                    uncheckedColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                ),
+                modifier = Modifier.padding(end = 8.dp).align(Alignment.CenterVertically)
+            )
+
+            val textColor =
+                if (isSystemInDarkTheme()) Color.White else MaterialTheme.colorScheme.onSurface
+            Text(
+                text = task,
+                color = textColor,
+                fontSize = 16.sp,
+                modifier = Modifier.align(Alignment.CenterVertically)
+            )
+            Spacer(Modifier.weight(1f))
+            IconButton(
+                onClick = { onDelete(task) },
+                modifier = Modifier.align(Alignment.CenterVertically)
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Delete,
+                    contentDescription = "Delete",
+                    tint = Color(0xFF6750A4)
+                )
             }
         }
     }
-
 }
-
