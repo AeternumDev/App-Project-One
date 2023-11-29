@@ -8,6 +8,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
@@ -33,7 +34,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathFillType
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -130,6 +137,13 @@ class MainActivity : AppCompatActivity() {
         val keyboardController = LocalSoftwareKeyboardController.current
         val focusRequester = remember { FocusRequester() }
 
+        val priorityColor = when (priority) {
+            2 -> Color.Yellow
+            3 -> Color(0xFFFFA500) // Orange
+            4 -> Color(0xFF800000) // Vine Red
+            else -> Color.Gray
+        }
+
         val prioritySymbol = when (priority) {
             2 -> "!"
             3 -> "!!"
@@ -144,7 +158,7 @@ class MainActivity : AppCompatActivity() {
                     onDismiss()
                 },
                 title = {
-                    Text(text = "Task hinzufügen")
+                    Text(text = "Task hinzufügen", color = Color(0xFF6200EE)) // Purple color
                 },
                 text = {
                     Column {
@@ -156,43 +170,53 @@ class MainActivity : AppCompatActivity() {
                             modifier = Modifier.focusRequester(focusRequester)
                         )
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text("Priority:")
+                        Text("Priority:", color = Color(0xFF6200EE)) // Purple color
                         Row {
-                            PriorityButton(priorityLabel = "!", setPriority = { priority = 2 })
-                            PriorityButton(priorityLabel = "!!", setPriority = { priority = 3 })
-                            PriorityButton(priorityLabel = "!!!", setPriority = { priority = 4 })
+                            PriorityButton(
+                                priorityLevel = 2,
+                                currentPriority = priority
+                            ) { priority = 2 }
+                            PriorityButton(
+                                priorityLevel = 3,
+                                currentPriority = priority
+                            ) { priority = 3 }
+                            PriorityButton(
+                                priorityLevel = 4,
+                                currentPriority = priority
+                            ) { priority = 4 }
                         }
                     }
                 },
                 confirmButton = {
                     TextButton(
                         onClick = {
-                            // Concatenate the task description with the priority symbol
-                            val taskWithPriority =
-                                text + if (prioritySymbol.isNotEmpty()) " ($prioritySymbol)" else ""
+                            val taskWithPriority = text + if (priority > 1) " ($priority)" else ""
                             if (taskWithPriority.isNotBlank()) {
                                 onAdd(taskWithPriority)
                                 text = "" // Clear the text field after adding a task
                                 priority = 1 // Reset to default (normal priority)
                             }
                             keyboardController?.hide()
-                        }
+                        },
+                        colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFF6200EE)) // Purple color
                     ) {
                         Text("Hinzufügen")
                     }
                 },
                 dismissButton = {
-                    TextButton(onClick = {
-                        keyboardController?.hide()
-                        onDismiss()
-                    }) {
+                    TextButton(
+                        onClick = {
+                            keyboardController?.hide()
+                            onDismiss()
+                        },
+                        colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFF6200EE)) // Purple color
+                    ) {
                         Text("Abbrechen")
                     }
                 },
-                shape = RoundedCornerShape(8.dp)
+                shape = RoundedCornerShape(16.dp) // More rounded corners
             )
 
-            // Launch effect to request focus and show keyboard
             LaunchedEffect(Unit) {
                 focusRequester.requestFocus()
                 keyboardController?.show()
@@ -201,12 +225,94 @@ class MainActivity : AppCompatActivity() {
     }
 
     @Composable
-    fun PriorityButton(priorityLabel: String, setPriority: () -> Unit) {
-        Button(
+    fun PriorityButton(priorityLevel: Int, currentPriority: Int, setPriority: () -> Unit) {
+        val isSelected = currentPriority == priorityLevel
+        val flagColor = when (priorityLevel) {
+            2 -> Color(color = 0xFF008080)// For priority "!"
+            3 -> Color(0xFFFFA500) // For priority "!!"
+            4 -> Color.Red // For priority "!!!"
+            else -> Color.Gray // No priority or default
+        }
+
+        OutlinedButton(
             onClick = setPriority,
-            modifier = Modifier.padding(end = 8.dp)
+            modifier = Modifier.padding(end = 8.dp),
+            shape = RoundedCornerShape(50), // More rounded corners
+            colors = ButtonDefaults.outlinedButtonColors(
+                backgroundColor = if (isSelected) Color.LightGray else Color.White
+            ),
+            border = BorderStroke(1.dp, Color(0xFF6200EE)) // Purple border
         ) {
-            Text(priorityLabel)
+            if (priorityLevel > 1) { // Show flag only for priorities "!", "!!", and "!!!"
+                Icon(
+                    imageVector = rememberFlag(),
+                    contentDescription = "Priority Flag",
+                    tint = flagColor,
+                    modifier = Modifier.size(20.dp) // Smaller icon size
+                )
+            }
+        }
+    }
+
+    @Composable
+    fun rememberFlag(): ImageVector {
+        return remember {
+            ImageVector.Builder(
+                name = "flag",
+                defaultWidth = 40.0.dp,
+                defaultHeight = 40.0.dp,
+                viewportWidth = 40.0f,
+                viewportHeight = 40.0f
+            ).apply {
+                path(
+                    fill = SolidColor(Color.Black),
+                    fillAlpha = 1f,
+                    stroke = null,
+                    strokeAlpha = 1f,
+                    strokeLineWidth = 1.0f,
+                    strokeLineCap = StrokeCap.Butt,
+                    strokeLineJoin = StrokeJoin.Miter,
+                    strokeLineMiter = 1f,
+                    pathFillType = PathFillType.NonZero
+                ) {
+                    moveTo(9.875f, 34.792f)
+                    quadToRelative(-0.542f, 0f, -0.937f, -0.375f)
+                    quadToRelative(-0.396f, -0.375f, -0.396f, -0.917f)
+                    verticalLineTo(8.208f)
+                    quadToRelative(0f, -0.541f, 0.375f, -0.916f)
+                    reflectiveQuadToRelative(0.958f, -0.375f)
+                    horizontalLineToRelative(11.833f)
+                    quadToRelative(0.459f, 0f, 0.813f, 0.291f)
+                    quadToRelative(0.354f, 0.292f, 0.437f, 0.75f)
+                    lineToRelative(0.542f, 2.417f)
+                    horizontalLineToRelative(8.292f)
+                    quadToRelative(0.583f, 0f, 0.958f, 0.375f)
+                    reflectiveQuadToRelative(0.375f, 0.958f)
+                    verticalLineToRelative(12.834f)
+                    quadToRelative(0f, 0.541f, -0.375f, 0.916f)
+                    reflectiveQuadToRelative(-0.958f, 0.375f)
+                    horizontalLineTo(23.5f)
+                    quadToRelative(-0.5f, 0f, -0.854f, -0.271f)
+                    quadToRelative(-0.354f, -0.27f, -0.438f, -0.77f)
+                    lineToRelative(-0.541f, -2.417f)
+                    horizontalLineTo(11.208f)
+                    verticalLineTo(33.5f)
+                    quadToRelative(0f, 0.542f, -0.396f, 0.917f)
+                    quadToRelative(-0.395f, 0.375f, -0.937f, 0.375f)
+                    close()
+                    moveToRelative(10.958f, -18.417f)
+                    close()
+                    moveToRelative(3.792f, 6.833f)
+                    horizontalLineToRelative(5.833f)
+                    verticalLineTo(13.042f)
+                    horizontalLineToRelative(-9.166f)
+                    lineToRelative(-0.75f, -3.5f)
+                    horizontalLineToRelative(-9.334f)
+                    verticalLineTo(19.75f)
+                    horizontalLineToRelative(12.667f)
+                    close()
+                }
+            }.build()
         }
     }
 
@@ -441,18 +547,32 @@ class MainActivity : AppCompatActivity() {
 
     //Tasklist
     @Composable
-    fun TaskItem(
-        task: String,
-        onDelete: (String) -> Unit,
-        onTaskCompleted: (String) -> Unit
-    ) {
-        val isChecked =
-            remember { mutableStateOf(false) } // State to keep track of the checkmark status
+    fun TaskItem(task: String, onDelete: (String) -> Unit, onTaskCompleted: (String) -> Unit) {
+        // Define the isChecked state here
+        val isChecked = remember { mutableStateOf(false) }
+
+        // Initialize variables for description and priority level
+        var description = task
+        var priorityLevel = 1
+
+        // Check if the task contains priority information and extract it
+        if (task.contains("(") && task.endsWith(")")) {
+            val splitTask = task.split("(", limit = 2)
+            description = splitTask[0]
+            priorityLevel = splitTask[1].dropLast(1).toIntOrNull() ?: 1
+        }
+
+        val flagColor = when (priorityLevel) {
+            2 -> Color(0xFF008080) // Teal for priority "!"
+            3 -> Color(0xFFFFA500) // Orange for priority "!!"
+            4 -> Color.Red         // Red for priority "!!!"
+            else -> Color.Transparent // No priority
+        }
 
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 3.dp, horizontal = 0.dp)
+                .padding(vertical = 0.dp, horizontal = 0.dp)
         ) {
             // Checkbox with a circle shape
             Checkbox(
@@ -470,11 +590,20 @@ class MainActivity : AppCompatActivity() {
                 modifier = Modifier.padding(end = 8.dp).align(Alignment.CenterVertically)
             )
 
-            val textColor =
-                if (isSystemInDarkTheme()) Color.White else MaterialTheme.colorScheme.onSurface
+            if (flagColor != Color.Transparent) {
+                Icon(
+                    imageVector = rememberFlag(),
+                    contentDescription = "Priority Flag",
+                    tint = flagColor,
+                    modifier = Modifier
+                        .size(20.dp)
+                        .align(Alignment.CenterVertically)
+                )
+            }
+
             Text(
-                text = task,
-                color = textColor,
+                text = description,
+                color = if (isSystemInDarkTheme()) Color.White else MaterialTheme.colorScheme.onSurface,
                 fontSize = 16.sp,
                 modifier = Modifier.align(Alignment.CenterVertically)
             )
