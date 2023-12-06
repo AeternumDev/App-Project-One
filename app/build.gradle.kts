@@ -12,8 +12,8 @@ android {
         applicationId = "com.aeternumindustries.taskmaker"
         minSdk = 31
         targetSdk = 34
-        versionCode = 4
-        versionName = "1.7.0-alpha"
+        versionCode = 5
+        versionName = "1.8.3-alpha"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

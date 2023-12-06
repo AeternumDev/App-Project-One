@@ -3,30 +3,71 @@ package com.example.taskmaker
 import android.content.Context
 import android.os.Build
 import android.os.Bundle
+import android.os.VibrationEffect
+import android.os.Vibrator
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.*
+import androidx.compose.material.AlertDialog
+import androidx.compose.material.ButtonDefaults
+import androidx.compose.material.Card
+import androidx.compose.material.CheckboxColors
+import androidx.compose.material.CheckboxDefaults
+import androidx.compose.material.Divider
+import androidx.compose.material.DrawerState
+import androidx.compose.material.DrawerValue
+import androidx.compose.material.FloatingActionButton
+import androidx.compose.material.Icon
+import androidx.compose.material.IconButton
+import androidx.compose.material.OutlinedButton
+import androidx.compose.material.OutlinedTextField
+import androidx.compose.material.Scaffold
+import androidx.compose.material.TextButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.rememberDrawerState
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.lightColorScheme
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -41,9 +82,11 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
@@ -144,12 +187,6 @@ class MainActivity : AppCompatActivity() {
             else -> Color.Gray
         }
 
-        val prioritySymbol = when (priority) {
-            2 -> "!"
-            3 -> "!!"
-            4 -> "!!!"
-            else -> "" // No symbol for normal priority
-        }
 
         if (showAddTaskDialog) {
             AlertDialog(
@@ -346,7 +383,7 @@ class MainActivity : AppCompatActivity() {
                     CenterAlignedTopAppBar(
                         title = {
                             Text(
-                                "Calendo",
+                                "Calendodo",
                                 modifier = Modifier.padding(vertical = 8.dp),
                                 color = MaterialTheme.colorScheme.onSurface
                             )
@@ -524,72 +561,121 @@ class MainActivity : AppCompatActivity() {
 
     @Composable
     fun TaskList(tasks: SnapshotStateList<String>, onTaskCompleted: (String) -> Unit) {
-        LazyColumn(
+        val lazyListState = rememberLazyListState()
+        var isVisible by remember { mutableStateOf(true) }
+
+        Column(
             modifier = Modifier
-                .padding(start = 10.dp, end = 10.dp)
+                .padding(10.dp, end = 10.dp)
                 .padding(horizontal = 8.dp)
                 .padding(vertical = 10.dp)
         ) {
-            itemsIndexed(items = tasks) { index, task ->
-                val isVisible = remember { mutableStateOf(true) }
-                TaskItem(task = task, onDelete = {
-                    if (isVisible.value) {
-                        isVisible.value = false
-                    } else {
-                        tasks.remove(task)
-                        saveTasks()
-                    }
-                }, onTaskCompleted = onTaskCompleted)
-                Divider(color = Color.LightGray, thickness = 1.dp)
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                state = lazyListState
+            ) {
+                itemsIndexed(items = tasks) { _, task ->
+                    TaskItem(
+                        task = task,
+                        isVisible = isVisible,
+                        onDelete = {
+                            if (isVisible) {
+                                isVisible = false
+                            } else {
+                                tasks.remove(task)
+                                saveTasks()
+                            }
+                        },
+                        onTaskCompleted = onTaskCompleted
+                    )
+
+                    // Divider after each item
+                    Divider(color = Color.LightGray, thickness = 1.dp)
+                }
+            }
+        }
+    }
+
+    @Composable
+    fun RoundCheckbox(
+        checked: Boolean,
+        onCheckedChange: (Boolean) -> Unit,
+        modifier: Modifier = Modifier,
+        size: Dp = 24.dp,
+        checkedColor: Color = MaterialTheme.colorScheme.primary,
+        uncheckedColor: Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+        checkmarkColor: Color = Color.White,
+        colorScheme: CheckboxColors
+    ) {
+        val duration = 200
+
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = modifier
+                .size(22.dp)
+                .background(
+                    color = if (checked) checkedColor else Color.White, // Set to white when unchecked
+                    shape = CircleShape
+                )
+                .border(
+                    width = 1.5.dp,
+                    color = if (checked) checkedColor else uncheckedColor,
+                    shape = CircleShape
+                )
+                .clickable { onCheckedChange(!checked) }
+        ) {
+            AnimatedVisibility(
+                visible = checked,
+                enter = scaleIn(
+                    animationSpec = tween(duration),
+                    initialScale = 0.3f // You can adjust the initial scale as needed
+                ),
+                exit = fadeOut()
+            ) {
+                Icon(
+                    Icons.Default.Check,
+                    contentDescription = null,
+                    tint = checkmarkColor
+                )
             }
         }
     }
 
     //Tasklist
     @Composable
-    fun TaskItem(task: String, onDelete: (String) -> Unit, onTaskCompleted: (String) -> Unit) {
-        // Define the isChecked state here
+    fun TaskItem(
+        task: String,
+        onDelete: (String) -> Unit,
+        onTaskCompleted: (String) -> Unit,
+        isVisible: Boolean,
+        context: Context = LocalContext.current
+    ) {
         val isChecked = remember { mutableStateOf(false) }
 
-        // Initialize variables for description and priority level
-        var description = task
-        var priorityLevel = 1
+        // Simplifying task description and priority level extraction
+        val (description, priorityLevel) = task.extractTaskDetails()
 
-        // Check if the task contains priority information and extract it
-        if (task.contains("(") && task.endsWith(")")) {
-            val splitTask = task.split("(", limit = 2)
-            description = splitTask[0]
-            priorityLevel = splitTask[1].dropLast(1).toIntOrNull() ?: 1
-        }
-
-        val flagColor = when (priorityLevel) {
-            2 -> Color(0xFF008080) // Teal for priority "!"
-            3 -> Color(0xFFFFA500) // Orange for priority "!!"
-            4 -> Color.Red         // Red for priority "!!!"
-            else -> Color.Transparent // No priority
-        }
+        val flagColor = getFlagColor(priorityLevel)
 
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 0.dp, horizontal = 0.dp)
+
         ) {
-            // Checkbox with a circle shape
-            Checkbox(
+            RoundCheckbox(
                 checked = isChecked.value,
                 onCheckedChange = { checked ->
                     isChecked.value = checked
                     if (checked) {
                         onTaskCompleted(task)
+                        provideHapticFeedback(context)
                     }
                 },
-                colors = CheckboxDefaults.colors(
+                colorScheme = CheckboxDefaults.colors(
                     checkedColor = MaterialTheme.colorScheme.primary,
-                    uncheckedColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    uncheckedColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    checkmarkColor = Color.White
                 ),
                 modifier = Modifier.padding(end = 8.dp).align(Alignment.CenterVertically)
             )
-
             if (flagColor != Color.Transparent) {
                 Icon(
                     imageVector = rememberFlag(),
@@ -615,9 +701,42 @@ class MainActivity : AppCompatActivity() {
                 Icon(
                     imageVector = Icons.Rounded.Delete,
                     contentDescription = "Delete",
-                    tint = Color(0xFF6750A4)
+                    tint = Color(0xFFBFBFBF),
+                    modifier = Modifier
+                        .size(20.dp)
                 )
             }
         }
+    }
+}
+
+// Helper function to provide haptic feedback
+fun provideHapticFeedback(context: Context) {
+    val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+    vibrator?.let {
+        val effect = VibrationEffect.createOneShot(5, VibrationEffect.DEFAULT_AMPLITUDE)
+        it.vibrate(effect)
+    }
+}
+
+
+// Extract task details
+fun String.extractTaskDetails(): Pair<String, Int> {
+    if (this.contains("(") && this.endsWith(")")) {
+        val splitTask = this.split("(", limit = 2)
+        val description = splitTask[0]
+        val priorityLevel = splitTask[1].dropLast(1).toIntOrNull() ?: 1
+        return description to priorityLevel
+    }
+    return this to 1 // Default values
+}
+
+// Get flag color based on priority
+fun getFlagColor(priorityLevel: Int): Color {
+    return when (priorityLevel) {
+        2 -> Color(0xFF008080) // Teal for priority "!"
+        3 -> Color(0xFFFFA500) // Orange for priority "!!"
+        4 -> Color.Red         // Red for priority "!!!"
+        else -> Color.Transparent // No priority
     }
 }
