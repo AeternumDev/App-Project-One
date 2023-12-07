@@ -17,6 +17,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -622,7 +623,12 @@ class MainActivity : AppCompatActivity() {
                     color = if (checked) checkedColor else uncheckedColor,
                     shape = CircleShape
                 )
-                .clickable { onCheckedChange(!checked) }
+                .clickable(
+                    indication = null, // Disable the ripple effect
+                    interactionSource = remember { MutableInteractionSource() } // Required for clickable
+                ) {
+                    onCheckedChange(!checked)
+                }
         ) {
             AnimatedVisibility(
                 visible = checked,
