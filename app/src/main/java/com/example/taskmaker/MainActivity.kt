@@ -13,7 +13,6 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -28,6 +27,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -36,8 +36,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.AlertDialog
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Card
-import androidx.compose.material.CheckboxColors
-import androidx.compose.material.CheckboxDefaults
 import androidx.compose.material.Divider
 import androidx.compose.material.DrawerState
 import androidx.compose.material.DrawerValue
@@ -51,12 +49,15 @@ import androidx.compose.material.TextButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.rememberDrawerState
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
@@ -64,6 +65,7 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -87,7 +89,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
@@ -96,12 +97,15 @@ import com.example.taskmaker.ui.theme.TaskMakerTheme
 import kotlinx.coroutines.launch
 
 
+
 class MainActivity : AppCompatActivity() {
 
     private var tasks = mutableStateListOf<String>()
     private lateinit var binding: ActivityMainBinding
     private var showAddTaskDialog by mutableStateOf(false)
     private var completedTasks = mutableStateListOf<String>()
+    private var selectedPriorities = mutableStateListOf<Int>() // Initially, no priorities are selected
+
 
 
     @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
@@ -149,21 +153,6 @@ class MainActivity : AppCompatActivity() {
     }
 
 
-    @Composable
-    fun AppTheme(content: @Composable () -> Unit) {
-        val colorScheme = lightColorScheme(
-            primary = Color(0xFFFFFFFF), // Example primary color
-            onPrimary = Color.White, // Content color for primary
-            // Define other colors as needed
-            surfaceVariant = Color.White     // This is the color we want for the status bar
-        )
-
-        MaterialTheme(
-            colorScheme = colorScheme,
-            content = content
-        )
-    }
-
     @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     @Preview(showBackground = true)
     @Composable
@@ -177,11 +166,11 @@ class MainActivity : AppCompatActivity() {
     @Composable
     fun AddTaskDialog(showAddTaskDialog: Boolean, onAdd: (String) -> Unit, onDismiss: () -> Unit) {
         var text by remember { mutableStateOf("") }
-        var priority by remember { mutableStateOf(1) } // Default to 1 (normal priority)
+        var priority by remember { mutableIntStateOf(1) } // Default to 1 (normal priority)
         val keyboardController = LocalSoftwareKeyboardController.current
         val focusRequester = remember { FocusRequester() }
 
-        val priorityColor = when (priority) {
+        when (priority) {
             2 -> Color.Yellow
             3 -> Color(0xFFFFA500) // Orange
             4 -> Color(0xFF800000) // Vine Red
@@ -279,7 +268,7 @@ class MainActivity : AppCompatActivity() {
             colors = ButtonDefaults.outlinedButtonColors(
                 backgroundColor = if (isSelected) Color.LightGray else Color.White
             ),
-            border = BorderStroke(1.dp, Color(0xFF6200EE)) // Purple border
+
         ) {
             if (priorityLevel > 1) { // Show flag only for priorities "!", "!!", and "!!!"
                 Icon(
@@ -432,16 +421,58 @@ class MainActivity : AppCompatActivity() {
                             .fillMaxWidth()
                             .padding(paddingValues)
                     ) {
-                        CustomCalendar() // Your custom calendar component
-                        if (completedTasks.isNotEmpty()) {
-                            CompletedTaskSection(completedTasks)
+                        CustomCalendar() // Custom calendar component
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(8.dp)
+                        ) {
+                            // Priority Filter Chips and Completed Tasks Section
+                            Row(
+                                modifier = Modifier.matchParentSize()
+                            ) {
+                                Spacer(modifier = Modifier.width(80.dp)) // Adjust the width as needed
+
+                                // Priority Filter Chips
+                                (2..4).forEach { priority ->
+                                    PriorityFilterChip(
+                                        priority = priority,
+                                        selectedPriorities = selectedPriorities
+                                    )
+                                }
+                            }
+
+                            // Completed Tasks Section overlaying other components when expanded
+                            if (completedTasks.isNotEmpty()) {
+                                CompletedTaskSection(completedTasks)
+                            }
                         }
 
-                        TaskList(tasks, onTaskCompleted = onTaskCompleted)
+                        // Task List
+                        val filteredTasks = if (selectedPriorities.isEmpty()) {
+                            tasks // Show all tasks if no priorities are selected
+                        } else {
+                            tasks.filter {
+                                val taskPriority = extractPriority(it) // Extract priority from task
+                                taskPriority in selectedPriorities
+                            }
+                        }
+
+                        TaskList(filteredTasks, onTaskCompleted = onTaskCompleted)
                     }
                 }
             )
         }
+    }
+
+    private fun extractPriority(task: String): Int {
+        // Regular expression to find a number inside parentheses at the end of the string
+        val regex = "\\((\\d+)\\)$".toRegex()
+        val matchResult = regex.find(task)
+
+        // If a match is found and it has a group, return the number, otherwise return a default priority (e.g., 1)
+        return matchResult?.groups?.get(1)?.value?.toIntOrNull() ?: 1
     }
 
     //done/erledigt button
@@ -497,7 +528,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    fun lerp(start: Float, stop: Float, fraction: Float): Float {
+    private fun lerp(start: Float, stop: Float, fraction: Float): Float {
         return (1 - fraction) * start + fraction * stop
     }
 
@@ -560,10 +591,59 @@ class MainActivity : AppCompatActivity() {
     }
 
 
+
+    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
-    fun TaskList(tasks: SnapshotStateList<String>, onTaskCompleted: (String) -> Unit) {
+    fun PriorityFilterChip(priority: Int, selectedPriorities: SnapshotStateList<Int>) {
+        // Check if the priority is in the selectedPriorities list
+        val isSelected = remember { mutableStateOf(priority in selectedPriorities) }
+
+        val flagColor = when (priority) {
+            2 -> Color(0xFF008080) // Teal for priority "!"
+            3 -> Color(0xFFFFA500) // Orange for priority "!!"
+            4 -> Color.Red         // Red for priority "!!!"
+            else -> Color.Transparent
+        }
+
+        FilterChip(
+            modifier = Modifier.padding(horizontal = 4.dp),
+            selected = isSelected.value,
+            onClick = {
+                isSelected.value = !isSelected.value
+                if (isSelected.value) {
+                    selectedPriorities.add(priority)
+                } else {
+                    selectedPriorities.remove(priority)
+                }
+            },
+            label = {
+                if (flagColor != Color.Transparent) {
+                    Icon(
+                        imageVector = rememberFlag(),
+                        contentDescription = "Priority Flag",
+                        tint = flagColor,
+                        modifier = Modifier.size(20.dp).padding(end = 4.dp)
+                    )
+                }
+            },
+            leadingIcon = if (isSelected.value) {
+                {
+                    Icon(
+                        imageVector = Icons.Filled.Done,
+                        contentDescription = "Done icon",
+                        modifier = Modifier.size(FilterChipDefaults.IconSize)
+                    )
+                }
+            } else {
+                null
+            }
+        )
+    }
+
+
+    @Composable
+    fun TaskList(tasks: List<String>, onTaskCompleted: (String) -> Unit) {
         val lazyListState = rememberLazyListState()
-        var isVisible by remember { mutableStateOf(true) }
 
         Column(
             modifier = Modifier
@@ -578,14 +658,9 @@ class MainActivity : AppCompatActivity() {
                 itemsIndexed(items = tasks) { _, task ->
                     TaskItem(
                         task = task,
-                        isVisible = isVisible,
                         onDelete = {
-                            if (isVisible) {
-                                isVisible = false
-                            } else {
-                                tasks.remove(task)
-                                saveTasks()
-                            }
+                            remove()
+                            saveTasks() // Save the updated list after deletion
                         },
                         onTaskCompleted = onTaskCompleted
                     )
@@ -602,11 +677,9 @@ class MainActivity : AppCompatActivity() {
         checked: Boolean,
         onCheckedChange: (Boolean) -> Unit,
         modifier: Modifier = Modifier,
-        size: Dp = 24.dp,
         checkedColor: Color = MaterialTheme.colorScheme.primary,
         uncheckedColor: Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-        checkmarkColor: Color = Color.White,
-        colorScheme: CheckboxColors
+        checkmarkColor: Color = Color.White
     ) {
         val duration = 200
 
@@ -653,7 +726,6 @@ class MainActivity : AppCompatActivity() {
         task: String,
         onDelete: (String) -> Unit,
         onTaskCompleted: (String) -> Unit,
-        isVisible: Boolean,
         context: Context = LocalContext.current
     ) {
         val isChecked = remember { mutableStateOf(false) }
@@ -663,9 +735,7 @@ class MainActivity : AppCompatActivity() {
 
         val flagColor = getFlagColor(priorityLevel)
 
-        Row(
-
-        ) {
+        Row {
             RoundCheckbox(
                 checked = isChecked.value,
                 onCheckedChange = { checked ->
@@ -675,11 +745,6 @@ class MainActivity : AppCompatActivity() {
                         provideHapticFeedback(context)
                     }
                 },
-                colorScheme = CheckboxDefaults.colors(
-                    checkedColor = MaterialTheme.colorScheme.primary,
-                    uncheckedColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                    checkmarkColor = Color.White
-                ),
                 modifier = Modifier.padding(end = 8.dp).align(Alignment.CenterVertically)
             )
             if (flagColor != Color.Transparent) {
@@ -700,8 +765,11 @@ class MainActivity : AppCompatActivity() {
                 modifier = Modifier.align(Alignment.CenterVertically)
             )
             Spacer(Modifier.weight(1f))
+
             IconButton(
-                onClick = { onDelete(task) },
+                onClick = {
+                    onDelete(task)
+                }, // This line has been added
                 modifier = Modifier.align(Alignment.CenterVertically)
             ) {
                 Icon(
@@ -714,6 +782,10 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
+}
+
+private fun remove() {
+
 }
 
 // Helper function to provide haptic feedback
