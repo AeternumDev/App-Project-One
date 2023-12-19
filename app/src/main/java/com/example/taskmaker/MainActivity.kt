@@ -104,8 +104,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private var showAddTaskDialog by mutableStateOf(false)
     private var completedTasks = mutableStateListOf<String>()
-    private var selectedPriorities = mutableStateListOf<Int>() // Initially, no priorities are selected
-
+    private var selectedPriorities =
+        mutableStateListOf<Int>() // Initially, no priorities are selected
 
 
     @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
@@ -118,8 +118,8 @@ class MainActivity : AppCompatActivity() {
 
         binding.composeView.setContent {
             TaskMakerTheme { // Apply Material 3 theming
-                // Your existing Compose content
-                TaskListScreen(tasks)
+                val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+                TaskListScreen(tasks, drawerState)
                 if (showAddTaskDialog) {
                     AddTaskDialog(
                         showAddTaskDialog = showAddTaskDialog,
@@ -153,12 +153,13 @@ class MainActivity : AppCompatActivity() {
     }
 
 
-    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+   @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     @Preview(showBackground = true)
     @Composable
     fun PreviewTaskListScreen() {
         val previewTasks = remember { mutableStateListOf("Task 1", "Task 2", "Task 3") }
-        TaskListScreen(previewTasks)
+       val drawerState = null
+       drawerState?.let { TaskListScreen(previewTasks, it) }
     }
 
 
@@ -269,7 +270,7 @@ class MainActivity : AppCompatActivity() {
                 backgroundColor = if (isSelected) Color.LightGray else Color.White
             ),
 
-        ) {
+            ) {
             if (priorityLevel > 1) { // Show flag only for priorities "!", "!!", and "!!!"
                 Icon(
                     imageVector = rememberFlag(),
@@ -347,7 +348,8 @@ class MainActivity : AppCompatActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     @Composable
-    fun TaskListScreen(tasks: SnapshotStateList<String>) {
+    fun TaskListScreen(tasks: SnapshotStateList<String>, drawerState: DrawerState) {
+        val coroutineScope = rememberCoroutineScope() // Remember the coroutine scope
         val myAppColorScheme = lightColorScheme(
             primary = Color(0xFF6750A4), // Light purple color
             onPrimary = Color.White,
@@ -360,7 +362,9 @@ class MainActivity : AppCompatActivity() {
         val onTaskCompleted: (String) -> Unit = { task ->
             tasks.remove(task)
             completedTasks.add(task)
+            saveTasks()  // Save the task state after marking a task as completed
         }
+
 
 
         MaterialTheme(colorScheme = myAppColorScheme) {
@@ -381,7 +385,11 @@ class MainActivity : AppCompatActivity() {
                         navigationIcon = {
                             IconButton(onClick = {
                                 coroutineScope.launch {
-                                    if (drawerState.isClosed) drawerState.open() else drawerState.close()
+                                    if (drawerState.isClosed) {
+                                        drawerState.open() // Open the drawer if it's closed
+                                    } else {
+                                        drawerState.close() // Close the drawer if it's open
+                                    }
                                 }
                             }) {
                                 Icon(
@@ -520,6 +528,7 @@ class MainActivity : AppCompatActivity() {
                             TaskItemRow(task, onReactivateTask = {
                                 completedTasks.remove(task)
                                 tasks.add(task)
+                                saveTasks()
                             })
                         }
                     }
@@ -591,7 +600,6 @@ class MainActivity : AppCompatActivity() {
     }
 
 
-
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun PriorityFilterChip(priority: Int, selectedPriorities: SnapshotStateList<Int>) {
@@ -658,9 +666,14 @@ class MainActivity : AppCompatActivity() {
                 itemsIndexed(items = tasks) { _, task ->
                     TaskItem(
                         task = task,
+                        initialChecked = false,
+                        onCheckedChange = { isChecked ->
+                            if (isChecked) {
+                                // Handle task completion here if needed
+                            }
+                        },
                         onDelete = {
-                            remove()
-                            saveTasks() // Save the updated list after deletion
+                            // Task deletion logic
                         },
                         onTaskCompleted = onTaskCompleted
                     )
@@ -724,97 +737,103 @@ class MainActivity : AppCompatActivity() {
     @Composable
     fun TaskItem(
         task: String,
+        initialChecked: Boolean,
+        onCheckedChange: (Boolean) -> Unit,
         onDelete: (String) -> Unit,
         onTaskCompleted: (String) -> Unit,
         context: Context = LocalContext.current
     ) {
-        val isChecked = remember { mutableStateOf(false) }
+        val isChecked = remember { mutableStateOf(initialChecked) }
 
-        // Simplifying task description and priority level extraction
         val (description, priorityLevel) = task.extractTaskDetails()
-
         val flagColor = getFlagColor(priorityLevel)
 
-        Row {
-            RoundCheckbox(
-                checked = isChecked.value,
-                onCheckedChange = { checked ->
-                    isChecked.value = checked
-                    if (checked) {
-                        onTaskCompleted(task)
-                        provideHapticFeedback(context)
-                    }
-                },
-                modifier = Modifier.padding(end = 8.dp).align(Alignment.CenterVertically)
-            )
-            if (flagColor != Color.Transparent) {
-                Icon(
-                    imageVector = rememberFlag(),
-                    contentDescription = "Priority Flag",
-                    tint = flagColor,
-                    modifier = Modifier
-                        .size(20.dp)
-                        .align(Alignment.CenterVertically)
+        AnimatedVisibility(
+            visible = !isChecked.value,
+            exit = fadeOut(animationSpec = tween(300)) // Adjust duration for smooth fading
+        ) {
+            Row {
+                RoundCheckbox(
+                    checked = isChecked.value,
+                    onCheckedChange = { checked ->
+                        isChecked.value = checked
+                        onCheckedChange(checked) // Callback when checked state changes
+                        if (checked) {
+                            onTaskCompleted(task)
+                            provideHapticFeedback(context)
+                        }
+                    },
+                    modifier = Modifier.padding(end = 8.dp).align(Alignment.CenterVertically)
                 )
-            }
+                if (flagColor != Color.Transparent) {
+                    Icon(
+                        imageVector = rememberFlag(),
+                        contentDescription = "Priority Flag",
+                        tint = flagColor,
+                        modifier = Modifier
+                            .size(20.dp)
+                            .align(Alignment.CenterVertically)
+                    )
+                }
 
-            Text(
-                text = description,
-                color = if (isSystemInDarkTheme()) Color.White else MaterialTheme.colorScheme.onSurface,
-                fontSize = 16.sp,
-                modifier = Modifier.align(Alignment.CenterVertically)
-            )
-            Spacer(Modifier.weight(1f))
-
-            IconButton(
-                onClick = {
-                    onDelete(task)
-                }, // This line has been added
-                modifier = Modifier.align(Alignment.CenterVertically)
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Delete,
-                    contentDescription = "Delete",
-                    tint = Color(0xFFBFBFBF),
-                    modifier = Modifier
-                        .size(20.dp)
+                Text(
+                    text = description,
+                    color = if (isSystemInDarkTheme()) Color.White else MaterialTheme.colorScheme.onSurface,
+                    fontSize = 16.sp,
+                    modifier = Modifier.align(Alignment.CenterVertically)
                 )
+                Spacer(Modifier.weight(1f))
+
+                IconButton(
+                    onClick = {
+                        onDelete(task)
+                    }, // This line has been added
+                    modifier = Modifier.align(Alignment.CenterVertically)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Delete,
+                        contentDescription = "Delete",
+                        tint = Color(0xFFBFBFBF),
+                        modifier = Modifier
+                            .size(20.dp)
+                    )
+                }
             }
         }
     }
-}
 
-private fun remove() {
+    private fun remove() {
 
-}
-
-// Helper function to provide haptic feedback
-fun provideHapticFeedback(context: Context) {
-    val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
-    vibrator?.let {
-        val effect = VibrationEffect.createOneShot(5, VibrationEffect.DEFAULT_AMPLITUDE)
-        it.vibrate(effect)
     }
-}
 
-
-// Extract task details
-fun String.extractTaskDetails(): Pair<String, Int> {
-    if (this.contains("(") && this.endsWith(")")) {
-        val splitTask = this.split("(", limit = 2)
-        val description = splitTask[0]
-        val priorityLevel = splitTask[1].dropLast(1).toIntOrNull() ?: 1
-        return description to priorityLevel
+    // Helper function to provide haptic feedback
+    fun provideHapticFeedback(context: Context) {
+        val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+        vibrator?.let {
+            val effect = VibrationEffect.createOneShot(5, VibrationEffect.DEFAULT_AMPLITUDE)
+            it.vibrate(effect)
+        }
     }
-    return this to 1 // Default values
-}
 
-// Get flag color based on priority
-fun getFlagColor(priorityLevel: Int): Color {
-    return when (priorityLevel) {
-        2 -> Color(0xFF008080) // Teal for priority "!"
-        3 -> Color(0xFFFFA500) // Orange for priority "!!"
-        4 -> Color.Red         // Red for priority "!!!"
-        else -> Color.Transparent // No priority
+
+    // Extract task details
+    fun String.extractTaskDetails(): Pair<String, Int> {
+        if (this.contains("(") && this.endsWith(")")) {
+            val splitTask = this.split("(", limit = 2)
+            val description = splitTask[0]
+            val priorityLevel = splitTask[1].dropLast(1).toIntOrNull() ?: 1
+            return description to priorityLevel
+        }
+        return this to 1 // Default values
+    }
+
+    // Get flag color based on priority
+    fun getFlagColor(priorityLevel: Int): Color {
+        return when (priorityLevel) {
+            2 -> Color(0xFF008080) // Teal for priority "!"
+            3 -> Color(0xFFFFA500) // Orange for priority "!!"
+            4 -> Color.Red         // Red for priority "!!!"
+            else -> Color.Transparent // No priority
+        }
     }
 }
